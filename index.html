@@ -764,8 +764,19 @@ async function gateInit(){
   try{ const r=await fetch('config.json?_='+Date.now(),{cache:'no-store'}); cfg=await r.json(); }
   catch(e){ body.innerHTML='<p>설정을 불러올 수 없어요.<br>잠시 후 다시 시도하거나 관리자에게 문의하세요.</p>'; return; }
   if(!cfg.open){ body.innerHTML='<p>지금은 닫혀 있어요.<br>관리자에게 문의하세요.</p>'; localStorage.removeItem(GATE_KEY); return; }
+  function logVisit(name){
+    if(!cfg.log) return;
+    try{
+      const last=+(localStorage.getItem('cpx_lastlog')||0);
+      if(Date.now()-last < 30*60*1000) return;   // 30분에 한 번만 기록 (시트 폭주 방지)
+      localStorage.setItem('cpx_lastlog', String(Date.now()));
+      const payload=JSON.stringify({name:name, t:new Date().toISOString(), ua:navigator.userAgent});
+      navigator.sendBeacon(cfg.log, new Blob([payload],{type:'text/plain'}));
+    }catch(e){}
+  }
   function enter(name){
     localStorage.setItem(GATE_KEY,JSON.stringify({name:name,code:cfg.code}));
+    logVisit(name);
     gate.classList.add('hidden');
     if(!document.querySelector('.gwho')){ const w=document.createElement('div'); w.className='gwho'; w.textContent='👤 '+name; document.body.appendChild(w); }
     startApp();
