@@ -5,93 +5,393 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>CPX 플래시카드</title>
 <style>
+/* ═══ CPX 답안지 (OMR) ═══════════════════════════════════════
+   채점표 은유: 문진 단계 = 마킹 칸. 칠하면 열리고, 건너뛰면 빈칸이 남는다. */
+:root{
+  --paper:#EDF2EC; --card:#F7FAF6; --ink:#17211C; --ink2:#516057;
+  --rule:#C6D4C8; --rule2:#DCE6DC;
+  --fill:#2C6B52;              /* 마킹 완료 */
+  --mark:#D6482E;              /* 빨간펜 = 놓친 것 */
+  --know:#2C6B52; --dont:#D6482E; --unrated:#A9B8AC;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --kr:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  /* 컬러태그(난이도) — 외움/모름(--know/--dont)과 같은 초록·빨강 계열이지만
+     채도를 낮추고 "왼쪽 띠 + 이모지"로만 쓴다. 테두리는 절대 태그색을 쓰지 않는다. */
+  --tag-hard:#C8503C; --tag-mid:#C08A1E; --tag-easy:#2F8F71;
+  /* 형광펜 2색 */
+  --hl-y:#FBEB93; --hl-p:#F8C4DB; --hl-ink:#17211C;
+}
+@media (prefers-color-scheme:dark){
   :root{
-    --bg:#0f1115; --panel:#171a21; --panel2:#1f242e; --line:#2a3140;
-    --txt:#e6e9ef; --dim:#8b94a7; --accent:#4f8cff;
-    --know:#2fbf71; --dont:#ef5350; --unrated:#5a6273;
-    --chip:#222836;
+    --paper:#0E1310; --card:#161E19; --ink:#E4EBE5; --ink2:#93A597;
+    --rule:#2A362E; --rule2:#212B24;
+    --fill:#4FB388; --mark:#F0765A; --know:#4FB388; --dont:#F0765A; --unrated:#3C4A41;
+    --tag-hard:#E0705A; --tag-mid:#D7A63F; --tag-easy:#4FB39A;
+    --hl-y:#6E5F16; --hl-p:#6E3049; --hl-ink:#F3F7F3;
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{margin:0; height:100%;}
-  body{background:var(--bg); color:var(--txt);
-    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
-    display:flex; flex-direction:column; height:100dvh; overflow:hidden;}
-  header{padding:10px 12px 8px; border-bottom:1px solid var(--line); background:var(--panel);}
-  .row{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
-  .title{font-weight:700; font-size:16px; margin-right:auto;}
-  .toggle{font-size:12px; padding:6px 10px; border-radius:999px; background:var(--chip);
-    border:1px solid var(--line); color:var(--dim); cursor:pointer; user-select:none; white-space:nowrap;}
-  .toggle.on{background:var(--accent); border-color:var(--accent); color:#fff;}
-  .search{flex:1; min-width:120px; background:var(--panel2); border:1px solid var(--line);
-    color:var(--txt); border-radius:8px; padding:7px 10px; font-size:13px; outline:none;}
-  /* progress bar */
-  .pbar{display:flex; height:8px; border-radius:6px; overflow:hidden; margin:8px 0 4px; background:var(--panel2);}
-  .pbar > div{height:100%;}
-  .pstats{font-size:11px; color:var(--dim); display:flex; gap:12px;}
-  .pstats b{font-weight:700;}
-  .dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; vertical-align:middle;}
-  /* chips */
-  .chips{display:flex; gap:6px; overflow-x:auto; padding:8px 0 2px; -webkit-overflow-scrolling:touch;}
-  .chips::-webkit-scrollbar{display:none;}
-  .chip{font-size:12px; padding:5px 11px; border-radius:999px; background:var(--chip);
-    border:1px solid var(--line); color:var(--dim); cursor:pointer; white-space:nowrap;}
-  .chip.on{color:#fff; border-color:var(--accent); background:var(--accent);}
-  /* main */
-  main{flex:1; overflow-y:auto; padding:14px 12px 6px; -webkit-overflow-scrolling:touch;}
-  .meta{font-size:12px; color:var(--dim); display:flex; justify-content:space-between; margin-bottom:10px;}
-  .badge{padding:2px 8px; border-radius:6px; background:var(--panel2);}
-  .badge.know{color:var(--know);} .badge.dont{color:var(--dont);}
-  /* front */
-  .front{display:flex; align-items:center; justify-content:center; min-height:46vh;
-    background:var(--panel); border:1px solid var(--line); border-radius:18px; cursor:pointer; padding:24px; text-align:center;}
-  .front .sym{font-size:34px; font-weight:800; letter-spacing:1px;}
-  .front .hint{position:absolute; bottom:16px; font-size:12px; color:var(--dim);}
-  .frontwrap{position:relative; display:flex; justify-content:center;}
-  /* back */
-  .field{background:var(--panel); border:1px solid var(--line); border-radius:14px; margin-bottom:10px; overflow:hidden;}
-  .field h4{margin:0; padding:10px 14px; font-size:12px; color:var(--dim); letter-spacing:.5px;
-    display:flex; justify-content:space-between; align-items:center;}
-  .field .body{padding:0 14px 12px; font-size:15px; line-height:1.55;}
-  .field.hidden .body{display:none;}
-  .field.hidden h4 .lock{color:var(--accent);}
-  .field .lock{font-size:11px; color:var(--dim);}
-  .field.tap{cursor:pointer;}
-  .ddx-list{display:flex; flex-wrap:wrap; gap:6px;}
-  .ddx-list span{background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:4px 9px; font-size:13px;}
-  .mn{font-size:20px; font-weight:800; color:#ffd166; letter-spacing:1px;}
-  .aitems{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
-  .aitems span{background:#23314a; border:1px solid #34507e; color:#cfe0ff; border-radius:8px; padding:4px 9px; font-size:13px;}
-  .asks{margin-top:10px; border-top:1px dashed var(--line); padding-top:8px;}
-  .ask{font-size:13px; line-height:1.5; margin:6px 0; display:flex; gap:8px;}
-  .ask b{color:#9ad0ff; flex:0 0 auto; min-width:70px;}
-  .ask i{color:var(--txt); font-style:normal;}
-  .astep{font-size:11px; color:var(--accent); margin-left:8px;}
-  .warn{color:#ffb74d;}
-  .empty{text-align:center; color:var(--dim); padding:40px 10px;}
-  /* footer */
-  footer{border-top:1px solid var(--line); background:var(--panel); padding:10px 12px;
-    display:flex; flex-direction:column; gap:8px;}
-  .rate{display:flex; gap:8px;}
-  .rate button{flex:1; padding:11px; border-radius:12px; border:1px solid var(--line); font-size:14px; font-weight:700; cursor:pointer; background:var(--panel2); color:var(--txt);}
-  .rate button.know{border-color:var(--know);} .rate button.know.act{background:var(--know); color:#062a16;}
-  .rate button.dont{border-color:var(--dont);} .rate button.dont.act{background:var(--dont); color:#3a0606;}
-  .nav{display:flex; align-items:center; gap:8px;}
-  .nav button{padding:11px 14px; border-radius:12px; border:1px solid var(--line); background:var(--panel2); color:var(--txt); font-size:15px; cursor:pointer; min-width:84px;}
-  .nav .pos{flex:1; text-align:center; font-size:13px; color:var(--dim);}
-  button:active{transform:scale(.97);}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--kr);
+  display:flex;flex-direction:column;height:100dvh;overflow:hidden;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 
-  /* ── 입장 게이트 ── */
-  #gate{position:fixed; inset:0; z-index:1000; background:var(--bg); display:flex;
-    flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; gap:14px;}
-  #gate h1{font-size:22px; margin:0 0 4px;}
-  #gate p{color:var(--dim); font-size:14px; margin:0; max-width:300px; line-height:1.6;}
-  #gate input{width:240px; max-width:80vw; background:var(--panel2); border:1px solid var(--line);
-    color:var(--txt); border-radius:10px; padding:12px; font-size:16px; outline:none; text-align:center;}
-  #gate button{width:240px; max-width:80vw; background:var(--accent); color:#fff; border:none;
-    border-radius:10px; padding:13px; font-size:16px; font-weight:700; cursor:pointer;}
-  #gate .err{color:var(--dont); font-size:13px; min-height:16px;}
-  #gate.hidden{display:none;}
-  .gwho{position:fixed; top:7px; right:10px; z-index:5; font-size:11px; color:var(--dim);}
+/* ── 헤더: 답안지 상단 마킹 스트립 ── */
+header{padding:9px 13px 7px;background:var(--card);border-bottom:1px solid var(--rule);
+  position:relative}
+header::before{content:"";position:absolute;top:0;left:0;right:0;height:5px;
+  background:repeating-linear-gradient(90deg,var(--ink) 0 7px,transparent 7px 15px);opacity:.16}
+.row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.title{font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.14em;
+  text-transform:uppercase;margin-right:auto;color:var(--ink2)}
+.title::after{content:" / 답안지";letter-spacing:0;font-family:var(--kr);font-size:11px;opacity:.65}
+
+.toggle{font-size:11.5px;padding:5px 10px;border-radius:2px;background:transparent;
+  border:1px solid var(--rule);color:var(--ink2);cursor:pointer;user-select:none;
+  font-family:var(--mono);letter-spacing:.02em;transition:.13s}
+.toggle:hover{border-color:var(--fill);color:var(--ink)}
+.toggle.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+
+/* 진행바 = 타이밍 마크 */
+.pbar{display:flex;gap:2px;height:7px;margin:8px 0 4px}
+.pbar>span{flex:1;border-radius:1px;background:var(--unrated);opacity:.4}
+.pbar>span.know{background:var(--know);opacity:1}
+.pbar>span.dont{background:var(--dont);opacity:1}
+.pstats{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;color:var(--ink2);
+  display:flex;gap:11px}
+.pstats b{font-weight:700;color:var(--ink)}
+
+.search{flex:1;min-width:150px;padding:6px 9px;border:1px solid var(--rule);border-radius:2px;
+  background:var(--paper);color:var(--ink);font-size:12.5px;font-family:var(--kr)}
+.search:focus{outline:2px solid var(--fill);outline-offset:-1px;border-color:var(--fill)}
+.chips{display:flex;gap:5px;overflow-x:auto;margin-top:7px;padding-bottom:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;font-size:11px;padding:4px 9px;border:1px solid var(--rule);
+  border-radius:2px;color:var(--ink2);cursor:pointer;font-family:var(--mono);letter-spacing:.02em}
+.chip.on{background:var(--fill);border-color:var(--fill);color:#fff}
+
+/* ── 본문 ── */
+main{flex:1;overflow-y:auto;padding:13px;-webkit-overflow-scrolling:touch}
+.meta{display:flex;align-items:center;gap:8px;margin-bottom:11px;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--ink2);
+  text-transform:uppercase}
+.badge{margin-left:auto;padding:2px 8px;border:1px solid var(--rule);border-radius:2px;
+  letter-spacing:.06em}
+.badge.know{color:var(--know);border-color:var(--know)}
+.badge.dont{color:var(--dont);border-color:var(--dont)}
+
+/* 앞면: 주호소 */
+.frontwrap{display:flex;align-items:center;justify-content:center;min-height:54vh}
+.front{text-align:center;cursor:pointer;padding:34px 20px;width:100%;
+  border:1px solid var(--rule);border-radius:3px;background:var(--card);position:relative}
+.front::before{content:"주 호 소";position:absolute;top:13px;left:0;right:0;
+  font-family:var(--mono);font-size:10px;letter-spacing:.42em;color:var(--ink2);opacity:.8}
+.sym{font-size:clamp(30px,8.5vw,46px);font-weight:800;letter-spacing:-.025em;line-height:1.18}
+.hint{margin-top:15px;font-size:11px;color:var(--ink2);font-family:var(--mono);letter-spacing:.05em}
+
+/* ── 단계 = 마킹 행 (시그니처) ── */
+.steps{display:flex;flex-direction:column;gap:0;border:1px solid var(--rule);
+  border-radius:3px;background:var(--card);overflow:hidden}
+.step{border-bottom:1px solid var(--rule2);padding:0}
+.step:last-child{border-bottom:0}
+.step h4{margin:0;padding:11px 13px 11px 40px;font-size:13px;font-weight:700;
+  display:flex;justify-content:space-between;align-items:center;gap:8px;position:relative;
+  color:var(--ink)}
+/* 마킹 버블 */
+.step h4::before{content:"";position:absolute;left:13px;top:50%;transform:translateY(-50%);
+  width:15px;height:15px;border-radius:50%;border:1.5px solid var(--rule);
+  background:transparent;transition:.15s}
+.step.open h4::before{background:var(--fill);border-color:var(--fill);
+  box-shadow:inset 0 0 0 2.5px var(--card)}
+.step.skipped h4::before{background:transparent;border-color:var(--mark);
+  box-shadow:inset 0 0 0 0 transparent}
+.step.skipped h4::after{content:"";position:absolute;left:13px;top:50%;width:15px;height:1.5px;
+  background:var(--mark);transform:translateY(-50%) rotate(-42deg)}
+.step.locked{opacity:.42;cursor:pointer}
+.step.next{opacity:1;cursor:pointer;background:color-mix(in srgb,var(--fill) 6%,transparent)}
+.step.next h4::before{border-color:var(--fill);animation:pulse 1.7s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--fill) 45%,transparent)}
+                 50%{box-shadow:0 0 0 4px transparent}}
+.step.skipped h4{color:var(--mark)}
+.step .body{padding:0 13px 13px 40px;font-size:13.5px;line-height:1.68}
+.lock{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.07em;
+  color:var(--fill);flex-shrink:0}
+.lock.dim{color:var(--ink2);opacity:.5}
+.lock.miss{color:var(--mark)}
+
+.kv{display:flex;flex-direction:column;gap:6px}
+.kvrow{display:grid;grid-template-columns:74px 1fr;gap:10px;align-items:start}
+.kvrow b{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;color:var(--ink2);
+  font-weight:700;padding-top:3px;border-right:1px solid var(--rule2);padding-right:8px}
+.script div{padding:5px 0;border-bottom:1px dashed var(--rule2);font-size:13px;line-height:1.62}
+.script div:last-child{border-bottom:0}
+
+.mn{font-size:17px;font-weight:800;letter-spacing:.01em;color:var(--fill);line-height:1.45}
+.aexp{margin-top:8px;font-size:12.5px;line-height:1.62;color:var(--ink2)}
+.astepwrap{margin-top:9px}
+.astep{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--fill);
+  border:1px solid var(--fill);padding:3px 8px;border-radius:2px;display:inline-block}
+.asks{margin-top:9px;display:flex;flex-direction:column;gap:5px}
+.ask{display:grid;grid-template-columns:78px 1fr;gap:9px;font-size:12.5px;align-items:start}
+.ask b{font-family:var(--mono);font-size:10.5px;color:var(--ink2);padding-top:2px;font-weight:700}
+.ask i{font-style:normal;line-height:1.55}
+.warn{color:var(--mark);font-weight:600}
+
+.stepbar{display:flex;gap:7px;justify-content:center;margin:12px 0 2px}
+.empty{text-align:center;color:var(--ink2);padding:48px 16px;font-size:13px;line-height:1.7}
+
+/* ── 푸터 ── */
+footer{border-top:1px solid var(--rule);background:var(--card);padding:9px 13px 12px}
+.rate{display:flex;gap:8px;margin-bottom:8px}
+.rate button{flex:1;padding:11px;border-radius:2px;border:1px solid var(--rule);
+  background:transparent;color:var(--ink2);font-size:13px;font-weight:700;cursor:pointer;
+  font-family:var(--kr);transition:.13s}
+.rate button.know:hover,.rate button.know:focus-visible{border-color:var(--know);color:var(--know)}
+.rate button.dont:hover,.rate button.dont:focus-visible{border-color:var(--dont);color:var(--dont)}
+.nav{display:flex;align-items:center;gap:8px}
+.nav button{padding:8px 13px;border-radius:2px;border:1px solid var(--rule);background:transparent;
+  color:var(--ink2);font-size:12.5px;cursor:pointer;font-family:var(--kr)}
+.nav button:hover{border-color:var(--fill);color:var(--ink)}
+.pos{margin:0 auto;font-family:var(--mono);font-size:12px;letter-spacing:.09em;color:var(--ink2)}
+
+:focus-visible{outline:2px solid var(--fill);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:380px){
+  .step h4{padding-left:36px;font-size:12.5px}
+  .step .body{padding-left:36px}
+  .kvrow,.ask{grid-template-columns:62px 1fr}
+}
+.dot{display:inline-block;width:6px;height:6px;border-radius:1px;margin-right:5px;vertical-align:middle}
+
+/* 읽기 폭 제한 (데스크톱) */
+header>*,main>*,footer>*{max-width:880px;margin-inline:auto}
+header::before{max-width:none}
+
+/* ═══════════════════════════════════════════════════════════════
+   v4 셸: 입장 게이트 · 뷰 전환 · 라이브러리 · 피드백 · 프린트
+   (색은 전부 기존 OMR 변수만 사용)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 입장 게이트 (2026-08-01 개편 때 유실된 스타일 복구) ── */
+#gate{position:fixed;inset:0;z-index:1000;background:var(--paper);color:var(--ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:26px}
+#gate::before{content:"";position:absolute;top:0;left:0;right:0;height:5px;
+  background:repeating-linear-gradient(90deg,var(--ink) 0 7px,transparent 7px 15px);opacity:.16}
+#gate h1{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.17em;
+  text-transform:uppercase;color:var(--ink2);margin:0 0 8px}
+#gate p{color:var(--ink2);font-size:13px;margin:0;max-width:320px;line-height:1.7;text-align:center}
+#gate input{width:252px;max-width:82vw;background:var(--card);border:1px solid var(--rule);
+  border-radius:2px;color:var(--ink);padding:9px 11px;font-size:14px;font-family:var(--kr)}
+#gate input:focus{outline:2px solid var(--fill);outline-offset:-1px;border-color:var(--fill)}
+#gate button{width:252px;max-width:82vw;background:var(--ink);color:var(--card);
+  border:1px solid var(--ink);border-radius:2px;padding:10px;font-size:14px;font-weight:700;
+  cursor:pointer;font-family:var(--kr)}
+#gate .err{color:var(--mark);font-size:12.5px;min-height:17px;font-family:var(--mono)}
+#gate.hidden{display:none}
+.gwho{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--ink2);
+  white-space:nowrap}
+.gwho:empty{display:none}
+/* 시트 백업 상태 — 평소엔 조용한 회색, 확인 안 된 게 5분 넘으면 빨간 경고 */
+.bkstat{font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--ink2);
+  white-space:nowrap;cursor:pointer;padding:2px 5px;border:1px solid transparent;border-radius:2px}
+.bkstat:empty{display:none}
+.bkstat.bad{color:#fff;background:var(--dont);border-color:var(--dont);font-weight:700}
+
+/* ── 뷰 전환 ── */
+.vsw{display:flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden;flex:none}
+.vsw span{font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:5px 9px;
+  color:var(--ink2);cursor:pointer;border-right:1px solid var(--rule);user-select:none;transition:.13s}
+.vsw span:last-child{border-right:0}
+.vsw span:hover{color:var(--ink)}
+.vsw span.on{background:var(--ink);color:var(--card)}
+body.v-lib .cardonly,body.v-print .cardonly{display:none}
+body.v-lib footer,body.v-print footer{display:none}
+body.v-lib header>*,body.v-print header>*{max-width:none}
+body.v-lib main,body.v-print main{padding:0;overflow:hidden;display:flex;flex-direction:column}
+body.v-lib main>*,body.v-print main>*{max-width:none;margin-inline:0}
+
+/* 평가 버튼 활성 표시(.act 스타일 누락 보완) */
+.rate button.act.know{border-color:var(--know);color:var(--know);
+  background:color-mix(in srgb,var(--know) 11%,transparent)}
+.rate button.act.dont{border-color:var(--dont);color:var(--dont);
+  background:color-mix(in srgb,var(--dont) 11%,transparent)}
+
+/* ── 컨트롤 바 (라이브러리 · 프린트 공용) ── */
+.cbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 13px;flex:none;
+  background:var(--card);border-bottom:1px solid var(--rule)}
+.cbar .lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--ink2);
+  text-transform:uppercase}
+.cbar .sep{width:1px;height:15px;background:var(--rule);margin:0 2px}
+.cbar .cnt{margin-left:auto;font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;
+  color:var(--ink2)}
+.cbar .toggle{padding:4px 9px;font-size:11px}
+.sel{border:1px solid var(--rule);border-radius:2px;background:var(--paper);color:var(--ink);
+  font-family:var(--mono);font-size:11px;padding:4px 6px}
+.sel:focus{outline:2px solid var(--fill);outline-offset:-1px}
+
+/* ── 라이브러리 그리드: 보이는 영역을 정확히 3행으로 등분 ── */
+.libscroll{flex:1;min-height:0;overflow-y:auto;padding:9px 13px;scrollbar-gutter:stable;
+  -webkit-overflow-scrolling:touch}
+.grid{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));
+  gap:var(--gap,9px);grid-auto-rows:var(--rowh,170px)}
+.tile{border:1.5px solid var(--unrated);border-radius:3px;background:var(--card);
+  padding:8px 10px 9px;display:flex;flex-direction:column;gap:4px;cursor:pointer;
+  overflow:hidden;transition:border-color .13s}
+.tile:hover{border-color:var(--fill)}
+.tile.know{border-color:var(--know)}
+.tile.dont{border-color:var(--dont)}
+.tile .tsys{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--ink2);flex:none;
+  text-transform:uppercase;opacity:.85}
+.tile .tname{font-size:12.5px;font-weight:800;line-height:1.32;flex:none;overflow:hidden;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+/* 계통·제목은 고정 높이, 그 아래 칸들(말야마·감별진단·피드백)은 켜진 개수만큼
+   남은 높이를 1fr씩 균등 분배한다. 하나만 켜면 그 칸이 남은 높이를 전부 차지.
+   칸 사이 구분선·여백은 .cell에 똑같이 줘야 세 칸의 바깥 높이가 정확히 같아진다
+   (border-box + flex-basis:0에서는 padding·border 차이가 그대로 높이 차이로 남는다). */
+.tile .cell{flex:1 1 0;min-height:0;overflow:hidden;
+  border-top:1px solid transparent;padding-top:4px}
+.tile .hero{display:grid;place-items:center;text-align:center}
+.tile .hero>span{display:block;max-width:100%;font-weight:800;color:var(--fill);
+  line-height:1.3;overflow-wrap:anywhere;word-break:break-word;font-size:18px}
+.tile .hero>span.mnempty{color:var(--unrated);font-weight:700}
+/* 최소 크기로도 안 들어가는 초장문: 하드 컷 대신 아래로 흐려서 "더 있음" 표시 */
+.tile .cell.clip{-webkit-mask-image:linear-gradient(180deg,#000 76%,transparent 99%);
+  mask-image:linear-gradient(180deg,#000 76%,transparent 99%)}
+.tile .tddx,.tile .tfb{border-top-style:dashed;border-top-color:var(--rule2);color:var(--ink2)}
+.tile .tddx>span,.tile .tfb>span{display:block;font-size:10.5px;line-height:1.34;
+  overflow-wrap:anywhere;word-break:break-word}
+.tile .tfb{color:var(--ink)}
+.tile .tfb>span::before{content:"✎ ";color:var(--mark)}
+
+/* ── 피드백 메모 ── */
+.fbwrap{margin-top:15px;border:1px solid var(--rule);border-radius:3px;background:var(--card);
+  padding:10px 12px 11px}
+.fbhead{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.fbhead .lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;color:var(--ink2);
+  text-transform:uppercase;margin-right:auto}
+.fbwrap textarea{width:100%;min-height:66px;resize:vertical;background:var(--paper);color:var(--ink);
+  border:1px solid var(--rule);border-radius:2px;padding:8px 9px;font-size:13px;line-height:1.62;
+  font-family:var(--kr)}
+.fbwrap textarea:focus{outline:2px solid var(--fill);outline-offset:-1px;border-color:var(--fill)}
+.fbrow{display:flex;align-items:center;gap:7px;margin-top:7px;flex-wrap:wrap}
+.fbmsg{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--ink2);margin-left:auto}
+
+/* ── 말야마 편집 (피드백 메모와 같은 상자, ③A 공개 후에만 등장) ── */
+.mnwrap textarea{min-height:46px;font-weight:700;color:var(--fill);font-size:14px}
+.mnflag{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:var(--mark);
+  border:1px solid var(--mark);border-radius:2px;padding:1px 5px;white-space:nowrap}
+.mn .mnflag{border:0;padding:0;margin-left:7px;font-size:12px;vertical-align:middle}
+.mnorig{font-size:10.5px;line-height:1.45;color:var(--ink2);flex:1 1 100%;min-width:0;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.mnorig b{font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;margin-right:4px}
+.tile .tsys .edm{color:var(--mark);margin-left:4px}
+.pcard .pmn .pedit{color:var(--ink2);font-size:10px;margin-right:3px}
+
+/* ── 프린트 미리보기 ── */
+.prscroll{flex:1;min-height:0;overflow-y:auto;padding:14px 13px 30px;background:var(--paper)}
+#printdoc{max-width:980px;margin:0 auto;column-gap:13px}
+#printdoc.c2{column-count:2}
+#printdoc.c3{column-count:3}
+.pcard{break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;
+  display:inline-block;width:100%;border:1px solid var(--rule);border-radius:3px;
+  background:var(--card);padding:8px 11px 9px;margin:0 0 10px}
+.pcard h3{margin:0 0 3px;font-size:13.5px;font-weight:800;line-height:1.35}
+.pcard h3 .psys{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--ink2);
+  font-weight:600;margin-left:5px}
+.pcard .pmn{font-size:12.5px;font-weight:700;color:var(--fill);line-height:1.5;margin:4px 0}
+.pcard .pddx,.pcard .pfb{font-size:11px;line-height:1.5;color:var(--ink2);margin:3px 0}
+.pcard .pddx b,.pcard .pfb b{font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;
+  margin-right:4px}
+.pcard .psteps{margin-top:5px;border-top:1px dashed var(--rule2);padding-top:5px}
+.pcard .pstep{font-size:11px;line-height:1.5;margin:4px 0}
+.pcard .pstep>b{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;
+  color:var(--ink2);margin-bottom:2px}
+.pcard .mn{font-size:12px;line-height:1.45}
+.pcard .aexp{font-size:10.5px;margin-top:4px}
+.pcard .kvrow,.pcard .ask{grid-template-columns:58px 1fr;gap:7px;font-size:11px}
+.pcard .kvrow b,.pcard .ask b{font-size:9.5px}
+.pcard .asks,.pcard .astepwrap{margin-top:5px}
+.pcard .script div{font-size:11px;padding:3px 0}
+
+/* ═══ 신규: 컬러태그 · 라이브러리 탭 · 형광펜 · 감별진단 편집 ═══ */
+
+/* ── 형광펜 (말야마 · 감별진단 공용) ──
+   저장은 "칠한 문자열" 자체다(인덱스 아님). 표시할 때 원문에서 찾아 <mark>로 감싼다. */
+mark.hly,mark.hlp{background:var(--hl-y);color:var(--hl-ink);border-radius:2px;padding:0 1px;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+mark.hlp{background:var(--hl-p)}
+[data-hlt]{cursor:text}
+.pen{display:inline-flex;align-items:center;gap:5px}
+.pen .lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--ink2);
+  text-transform:uppercase}
+.penbtn{width:26px;height:21px;border:1px solid var(--rule);border-radius:2px;cursor:pointer;
+  display:inline-block;vertical-align:middle;background:var(--hl-y)}
+.penbtn.p{background:var(--hl-p)}
+.penbtn.x{background:transparent;width:auto;padding:0 8px;color:var(--ink2);font-family:var(--mono);
+  font-size:10.5px;line-height:19px;text-align:center}
+.penbtn:hover{border-color:var(--fill)}
+
+/* ── 컬러태그: 카드뷰 버튼 4개 ── */
+.tagbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:-4px 0 11px}
+.tagbar .lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--ink2);
+  text-transform:uppercase}
+.tagbtn{font-family:var(--kr);font-size:11.5px;padding:4px 9px;border:1px solid var(--rule);
+  border-radius:2px;color:var(--ink2);cursor:pointer;user-select:none;background:transparent;
+  transition:.13s;white-space:nowrap}
+.tagbtn:hover{border-color:var(--ink2);color:var(--ink)}
+.tagbtn.on{color:#fff;border-color:transparent;font-weight:700}
+.tagbtn.on[data-tag="hard"]{background:var(--tag-hard)}
+.tagbtn.on[data-tag="mid"]{background:var(--tag-mid)}
+.tagbtn.on[data-tag="easy"]{background:var(--tag-easy)}
+.tagbtn.on[data-tag=""]{background:var(--ink);color:var(--card)}
+
+/* ── 컬러태그: 라이브러리 타일 왼쪽 띠 ──
+   테두리(외움/모름)와 겹쳐 읽히지 않도록 "안쪽 왼쪽 띠 + 계통줄 이모지" 두 경로로 표시한다. */
+.tile{position:relative}
+.tile.tg::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--tgc)}
+.tile.tg-hard{--tgc:var(--tag-hard)}
+.tile.tg-mid{--tgc:var(--tag-mid)}
+.tile.tg-easy{--tgc:var(--tag-easy)}
+.tile .tsys .tgm{margin-left:4px;font-size:8.5px;vertical-align:middle;letter-spacing:0}
+
+/* ── 라이브러리 탭 ── */
+.libtabs{display:flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden;flex:none}
+.libtabs span{font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:4px 10px;
+  color:var(--ink2);cursor:pointer;border-right:1px solid var(--rule);user-select:none;transition:.13s}
+.libtabs span:last-child{border-right:0}
+.libtabs span:hover{color:var(--ink)}
+.libtabs span.on{background:var(--ink);color:var(--card)}
+
+/* ── 감별진단 편집 (말야마 편집과 같은 상자, ⑦ 공개 후에만 등장) ── */
+.ddxwrap textarea{min-height:56px;font-size:13px;color:var(--ink)}
+.pcard .pddx .pedit{color:var(--ink2);font-size:10px;margin-right:3px}
+
+/* ── 인쇄: 항상 흰 종이 · 검정 잉크 (다크모드에서 인쇄해도 동일) ──
+   반드시 prefers-color-scheme:dark 블록보다 뒤에 와야 변수가 덮인다 */
+@media print{
+  :root{
+    --paper:#fff; --card:#fff; --ink:#000; --ink2:#333; --rule:#999; --rule2:#c8c8c8;
+    --fill:#000; --mark:#000; --know:#000; --dont:#000; --unrated:#777;
+    /* 형광펜은 인쇄에서도 남는다 — 다크모드 변수를 반드시 덮을 것(안 그러면 검은 바탕이 찍힌다) */
+    --hl-y:#FBEB93; --hl-p:#F8C4DB; --hl-ink:#000;
+  }
+  @page{margin:12mm}
+  html,body{height:auto!important;overflow:visible!important;display:block!important;
+    background:#fff!important;color:#000!important}
+  header,footer,#gate,.gwho,.cbar,.libscroll,.stepbar,.fbwrap,.vsw,.toggle,.chips,.pbar,
+  .search,.pstats,.hint,#bkSave,.bkstat,.tagbar,.libtabs,.pen{display:none!important}
+  main{padding:0!important;overflow:visible!important;display:block!important;
+    max-width:none!important;flex:none!important}
+  main>*{max-width:none!important;margin-inline:0!important}
+  .prscroll{overflow:visible!important;padding:0!important;background:#fff!important;
+    flex:none!important;min-height:0!important}
+  #printdoc{max-width:none;margin:0}
+  .pcard{border:1px solid #999!important;background:#fff!important;box-shadow:none;
+    color:#000!important}
+  .pcard .pmn{color:#000!important}
+  .steps,.step,.front{background:#fff!important;color:#000!important}
+  a[href]::after{content:""}
+}
 </style>
 </head>
 <body>
@@ -110,9 +410,13 @@
 <header>
   <div class="row">
     <span class="title">CPX 플래시카드</span>
-    <span class="toggle" id="tCover">가림</span>
-    <span class="toggle" id="tTwo">A 2단검증</span>
-    <span class="toggle" id="tShuf">섞기</span>
+    <span class="gwho" id="gwho"></span>
+    <span class="toggle" id="bkSave" style="display:none">전체 저장</span>
+    <span class="bkstat" id="bkStat"></span>
+    <span class="vsw" id="vsw"><span data-view="card">카드</span><span data-view="lib">라이브러리</span><span data-view="print">프린트</span></span>
+    <span class="toggle cardonly" id="tCover">가림</span>
+    <span class="toggle cardonly" id="tTwo">A 2단검증</span>
+    <span class="toggle cardonly" id="tShuf">섞기</span>
   </div>
   <div class="pbar" id="pbar"></div>
   <div class="pstats" id="pstats"></div>
@@ -140,11 +444,10 @@
 </footer>
 
 <script>
-/* CPX 플래시카드 데이터 — KMY 정리본 기반 (45 주제)
- * 출처: CPX_KMY정리본.docx
- * 구조: 주제(주증상)마다 { id, sys, name, ddx, c, a:{mn,items}, f }
- * ASK : A 항목(label) -> 실제로 물어볼 질문.  app가 A 펼치기에서 사용.
- * id 는 진도 저장 키 — 데이터 갱신해도 유지되도록 고정.
+/* CPX 플래시카드 데이터 v3 — cpx_raw.pdf(2026-08-01) 구조 그대로
+ * raw의 주제 구분·행 구성을 기준으로 재생성 (기존 45장 틀에 맞추지 않음).
+ * 카드: { id, sys, name, page, old{}, c, a{mn,exp,items}, f, hx{}, pe{}, ddx, tests, edu, emerg, script[] }
+ * id 는 진도 저장 키 — 기존 카드와 최대한 승계.
  */
 
 const ASK = {
@@ -295,304 +598,1418 @@ const ASK = {
   "일차성": "특별한 원인 없이 월경 시작과 함께 통증?",
   "유산": "질출혈·하복부 통증·조직 배출?",
   "입덧": "메스꺼움·구토(임신 초기)?",
-  "전자간증": "두통·시야장애·어지럼, 혈압상승·부종?"
+  "전자간증": "두통·시야장애·어지럼, 혈압상승·부종?",
+
+  // ── cpx_raw.pdf(2026-08) 보강 ──
+  "Essential": "술마시면호전?",
+  "Gout": "전날과음?",
+  "IBS": "배변습관 변화, 배변 후 복통 완화 있나요?",
+  "Infection": "관절주사?",
+  "Mallory": "토하기 전 과음하셨나요?",
+  "OA": "많이사용, 쉬면나아짐?",
+  "PSGN/IgA신증": "최근 감기·목아픔 뒤 소변색이 진해졌나요?",
+  "PTSD": "충격적인일, 회피, 계속 생각남, 악몽?",
+  "SLE": "얼굴 나비모양 발진·햇빛 알레르기 있나요?",
+  "Varix": "황달·복부팽만·대소변 색 변화 있나요?",
+  "간경변": "황달, 복수?",
+  "갑상샘독성주기마비": "더위, 설사, 두근, 심한운동/ 과음?",
+  "강박장애": "하지 않으려해도 반복되는 생각, 해야할 것만 같은 느낌이 드는행동?",
+  "결장직장암": "뒤무직·변 굵기 변화·복부종괴 있나요?",
+  "공황장애": "죽을것같은공포, 숨막히고답답, 예기불안?",
+  "광장공포증": "넓은장소나 밀폐된공간?",
+  "기립성": "앉았다 일어설 때 핑 도나요?",
+  "기면증": "낮에 갑자기 잠듦, 웃거나 화낼 때 갑자기 힘빠짐?",
+  "긴장성": "목어깨, 오후 에아픔?",
+  "뇌졸중": "어지럼의식, 두통구토, 시야말어눌, 팔다리?",
+  "당뇨병": "다음·다갈·다뇨 있나요?",
+  "당뇨저혈당": "당뇨 있으신가요? 인슐린 끊거나 식사 거른 적?",
+  "림프절": "겨드랑이멍울, 압통?",
+  "만성간염": "황달·복수·간비대, 음주력·간염력 있나요?",
+  "만성피로증후군": "인후통·기억력저하·관절통·경부림프절·운동 후 권태감이 6개월 이상?",
+  "배뇨실신": "소변보다가 쓰러진 적 있나요?",
+  "범불안장애": "매사에 걱정이 많고 안절부절, 쉽게 피곤한가요?",
+  "부인과": "질출혈·질분비물 있나요?",
+  "불안": "불안하거나 초조한가요?",
+  "사회공포증": "사람들 앞에 서거나 발표할 때 심해지나요?",
+  "섬유근통": "우울불안, 수면장애, 온몸이쑤심?",
+  "소아기소발작": "과호흡, 빛자극?",
+  "수근관": "컴퓨터 오래사용?",
+  "수면문제": "잠들기 어렵거나 자주 깨시나요?",
+  "스트레스": "스트레스 받으면 심해지나요?",
+  "식중독": "여행·날것·평소 안 먹던 음식, 같이 먹은 사람도 아픈가요?",
+  "신경성방광": "소변 마려운 감각이 둔하거나 조절이 안 되나요?",
+  "신경성식욕부진": "체형에 대한 생각, 일부러 토한 적 있나요?",
+  "신부전": "거품뇨·부종·소변량 감소 있나요?",
+  "신증후군": "거품뇨·부종·소변량 변화 있나요?",
+  "심낭염": "숨 들이쉴 때·누우면 심해지고 앞으로 숙이면 나아지나요?",
+  "알도스테론증": "팔다리 힘빠짐·쥐가 자주 나나요? (저칼륨)",
+  "알코올": "과음하거나 갑자기 끊은 적 있나요?",
+  "알코올약물": "과음, 금주, 입에서 냄새?",
+  "양극성": "들뜸, 무엇이든 할수 있을것 같은 기분, 잠을 안자도 피 곤하지않음, 충동적?",
+  "영아연축": "잠들때 또는 깰때 발작?",
+  "우울증": "하루종일 우울하고 흥미가 없나요?",
+  "원발다음증": "물을 습관적으로 많이 드시나요?",
+  "원발성": "하복부압통, 오심구토, 설사?",
+  "음식알레르기": "발진 나기전 먹은 음식?",
+  "자궁근종": "생리량 많고 아랫배 덩이가 만져지나요?",
+  "자궁탈출증": "아래가 빠지는 느낌·변실금 있나요?",
+  "저혈당": "손떨림·식은땀, 최근 식사 거른 적 있나요?",
+  "저혈량": "출혈·구토설사·월경과다로 몸에서 물이 빠진 적 있나요?",
+  "적응장애": "스트레스?",
+  "젖당불내증": "우유 마신 후 심해지나요?",
+  "중추성요붕증": "밤에도 소변 때문에 자주 깨고 물을 계속 찾나요?",
+  "직장류": "밑이 빠지는 느낌, 자연분만력 있나요?",
+  "질분비물": "질 분비물 양·색·냄새·가려움 있나요?",
+  "청소년근간대뇌전증": "심한 스트레스·수면부족·음주 후 아침에 팔이 움찔한가요?",
+  "추간판": "다리 근력저하, 감각저하?",
+  "출생시": "주산기력, 발달, 성장?",
+  "출혈경향": "코피·잇몸출혈, 피가 잘 안 멎나요?",
+  "콜린성": "운동, 온수목욕?",
+  "쿠싱": "얼굴이 둥글어지고 배쪽만 살찌며 자색선조 있나요?",
+  "크롬": "발작적 두통·두근거림·식은땀 있나요?",
+  "특정공포증": "특정한 대상이 무서워서 피함?",
+  "편두통전조증상": "눈앞이반짝, 메스꺼움, 빛소리?",
+  "폐경": "홍조식은땀, 예민불면?",
+  "폐쇄": "주기적복통?",
+  "표적기관": "시야흐림·흉통·거품뇨·팔다리 힘빠짐 있나요? (눈·심장·콩팥·뇌)",
+  "호흡중지발작": "보채다가 발작?",
+  "횡문근융해증": "심한 운동·압박 후 소변이 콜라색인가요?"
 };
 
 const CARDS = [
-  // ───────── 소화기 ─────────
-  { id:"gi-acute-abd", sys:"소화기", name:"급성복통",
-    ddx:["소화궤양","급성 췌장염","급성 담낭염","급성 충수염","요관결석","자궁외임신"],
-    c:"통증의 양상, NRS, 일상생활 지장",
-    a:{ mn:"전소가비부인", items:["전신","소화","가슴","비뇨","부인"] },
-    f:"음식·배변·자세 (음주·식사·배변후 / 앞으로 숙이면 완화=췌장)" },
-
-  { id:"gi-dyspepsia", sys:"소화기", name:"소화불량 / 만성복통",
-    ddx:["GERD","위암","만성췌장염","젖당 불내성","IBS"],
-    c:"통증의 양상, NRS, 일상생활 지장",
-    a:{ mn:"전소G배", items:["전신","소화","GERD","배변"] },
-    f:"우유·위·대 (유당불내성 / 위궤양=식사 / 대변후 완화=IBS)" },
-
-  { id:"gi-hematemesis", sys:"소화기", name:"토혈",
-    ddx:["위궤양","식도정맥류","말로리 바이스","위암"],
-    c:"피의 색, 출혈량, 객혈과 감별(거품·기침·코/입·음식물·가래)",
-    a:{ mn:"전소탈출GVM", items:["전신","소화","탈수","출혈","GERD","Varices","Mallory Weiss"] },
-    f:"식사와 관련이 있나요?" },
-
-  { id:"gi-hematochezia", sys:"소화기", name:"혈변",
-    ddx:["장출혈","대장암","메켈게실","염증성 장질환","치핵","치열"],
-    c:"CAT(색·양·특징), 변의 양상",
-    a:{ mn:"전소탈출결항", items:["전신","소화","탈수","출혈","결장암","항문"] },
-    f:"과음, 과식" },
-
-  { id:"gi-vomiting", sys:"소화기", name:"구토",
-    ddx:["식중독","위염","위궤양","위암","장폐색증"],
-    c:"일상생활, CAT(색·양·특징)",
-    a:{ mn:"전소탈신비피신", items:["전신","소화","탈수","신경","비뇨","피부","신경성"] },
-    f:"식중독 (상한 음식?)" },
-
-  { id:"gi-bowel", sys:"소화기", name:"배변이상 (변비/설사)",
-    ddx:["기능성 변비","대장암","과민성대장증후군","식중독","젖당불내성","염증성 장질환"],
-    c:"양상, 배변습관",
-    a:{ mn:"전소(암/탈)항정갑", items:["전신","소화","암","탈수","항문","갑상샘","정신"] },
-    f:"스트레스 / 여행" },
-
-  { id:"gi-jaundice", sys:"소화기", name:"황달",
-    ddx:["급성 바이러스 간염","담석","암","알코올성 간염","담관염"],
-    c:"정확히 어떤 노란색인지, 최근 녹황색 채소 섭취?",
-    a:{ mn:"전소탈출황", items:["전신","소화","탈수","출혈","황달증상"] },
-    f:"스·운·해·여·성 (스트레스·운동=길버트 / 해산물·여행=A형 / 성관계=B형)" },
-
-  // ───────── 심혈관 ─────────
-  { id:"cv-chestpain", sys:"심혈관", name:"가슴통증",
-    ddx:["STEMI","angina","심장막염","대동맥박리","기흉","GERD"],
-    c:"양상(쥐어짜듯·찌르듯·찢어지듯), NRS",
-    a:{ mn:"전순대호소표정", items:["전신","순환","대동맥박리","호흡","소화","대상포진","정신"] },
-    f:"통증이 완화? 악화?" },
-
-  { id:"cv-syncope", sys:"심혈관", name:"실신",
-    ddx:["혈관미주신경성 실신","기립 저혈압","일과성 허혈발작","경련","뇌출혈"],
-    c:"실신 전(눈앞캄캄·메스꺼움·식은땀) / 중(대소변·팔다리떨기·눈돌아감·혀깨물기) / 후(두통·혼란·피로·손발힘빠짐·저림)",
-    a:{ mn:"전순탈정", items:["전신","순환기","탈수","정신"] },
-    f:"원인, 완화 요인" },
-
-  { id:"cv-palpitation", sys:"심혈관", name:"두근거림",
-    ddx:["생리적 빈맥","갑상샘항진증","PSVT(갑작스럽고 소변 마려움)","저혈당"],
-    c:"규칙·갑자기·소변마려움·느낌 (규칙적으로 갑자기 소변 마려우며 심장이 쿵)",
-    a:{ mn:"전순응혈갑정크", items:["전신","순환","응급","혈량저하","갑상샘항진","정신","크롬친화세포종"] },
-    f:"악화, 완화" },
-
-  { id:"cv-htn", sys:"심혈관", name:"고혈압",
-    ddx:["본태 고혈압","만성신부전","갑상샘항진","크롬친화세포종"],
-    c:"10분 이상 충분히 휴식 후 측정? 커피·담배·음주 안 했는지",
-    a:{ mn:"키·몸무게·허리둘레(대사) + 수표갑쿠크알", items:["수면무호흡","표적기관(눈·심장·신장)","갑상샘항진","쿠싱","크롬친화세포종","알도스테론증"] },
-    f:"없음" },
-
-  { id:"cv-dyslipid", sys:"심혈관", name:"이상지질혈증",
-    ddx:["일차성 고콜레스테롤혈증","가족성 고콜레스테롤혈증","당뇨병"],
-    c:"—",
-    a:{ mn:"키·몸무게·허리둘레(대사) + 수전쿠신죽갑당", items:["수면무호흡","전신","쿠싱","신증후군","죽상경화","갑상샘저하","당뇨"] },
-    f:"없음" },
-
-  // ───────── 호흡기 ─────────
-  { id:"resp-cough", sys:"호흡기", name:"기침",
-    ddx:["상기도감염","폐렴/폐암","천식","COPD","폐결핵"],
-    c:"가래, 피 동반?",
-    a:{ mn:"전호알부순소", items:["전신","호흡","알레르기비염","부비동염","순환","GERD"] },
-    f:"특정 계절, 찬바람, 야간, 운동, 감기, 식후 자세" },
-
-  { id:"resp-rhinorrhea", sys:"호흡기", name:"콧물 / 코막힘",
-    ddx:["알레르기 비염","부비동염","vasomotor rhinitis"],
-    c:"CAT(색·양·특징)",
-    a:{ mn:"전호후부알(혈)", items:["전신","호흡","후비루","부비동염·종양","알레르기비염"] },
-    f:"감기, 찬바람, 뜨거운 음식, 반려동물" },
-
-  { id:"resp-hemoptysis", sys:"호흡기", name:"객혈",
-    ddx:["폐암","기관지확장증","기관지염","폐흡충증","폐결핵"],
-    c:"CAT, 냄새, 음식/거품 (객혈↔토혈 감별)",
-    a:{ mn:"전탈출호순", items:["전신","탈수","출혈","호흡","순환"] },
-    f:"민물게장, 감기 (민감)" },
-
-  { id:"resp-dyspnea", sys:"호흡기", name:"호흡곤란",
-    ddx:["천식","COPD","기관지확장증","폐색전증","심부전","갑상샘항진증","공황장애"],
-    c:"들숨/날숨, 일상생활, mMRC(등산후 / 또래와 평지 100m / 옷 갈아입기)",
-    a:{ mn:"전호심정알기갑", items:["전신","호흡","심부전","정신","알레르기","기흉","갑상샘항진"] },
-    f:"천식(밤·찬공기 악화) / 심부전(자세에 따라 양상 변화)" },
-
-  // ───────── 신장/비뇨 ─────────
-  { id:"uro-polyuria", sys:"신장/비뇨", name:"다뇨 / 핍뇨",
-    ddx:["다음증","중추요붕증","당뇨/혈량저하 급성신손상","약물유발 신손상","연쇄구균 후 사구체신염"],
-    c:"CAT(색·양·특징)",
-    a:{ mn:"전비탈 + 원중당 / 신전신요", items:["전신","비뇨","탈수","원발다음","중추요붕","당뇨","신전성","신성","요독증"] },
-    f:"하루 중에 물은 얼마나 드시는가" },
-
-  { id:"uro-hematuria", sys:"신장/비뇨", name:"붉은색 소변",
-    ddx:["상부요로(PSGN)","하부요로(요로결석·방광암·전립샘암)","가성혈뇨(리팜핀·횡문근융해)"],
-    c:"CAT(색·양·특징)",
-    a:{ mn:"전비탈출방신외P", items:["전신","비뇨","탈수","출혈","방광염","신우신염","외음부","PSGN"] },
-    f:"최근 심한 운동? (횡문근융해증)" },
-
-  { id:"uro-voiding", sys:"신장/비뇨", name:"배뇨이상 / 소변찔끔증",
-    ddx:["방광염","복압요실금","절박요실금","과민방광","전립샘비대","전립선염","전립선암","요도염"],
-    c:"CAT(색·양·특징)",
-    a:{ mn:"전비 방신 당신외여정", items:["전신","비뇨","방광염","신우신염","당뇨","신경","외음부","여성","정신"] },
-    f:"날씨 추워지면 심해지나요? (과민성)" },
-
-  // ───────── 전신 ─────────
-  { id:"sys-fever", sys:"전신", name:"발열",
-    ddx:["인플루엔자","장티푸스","급성신우신염","연조직염","쯔쯔가무시","말라리아","약물유발열"],
-    c:"몇 도였는지, 측정 방법?",
-    a:{ mn:"전탈호소비피신", items:["전신","탈수","호흡","소화","비뇨","피부","신경"] },
-    f:"해·성·야·동·모·아·해·단 (해외여행/성관계/야외활동/접촉동물/모기진드기/아픈사람접촉/해산물/단체생활)" },
-
-  { id:"sys-bruise", sys:"전신", name:"쉽게 멍이 듦",
-    ddx:["간질환","특발혈소판감소자반병(ITP)","쿠싱"],
-    c:"CAT (창백반응 확인)",
-    a:{ mn:"전탈출 HHIT 간쿠", items:["전신","탈수","출혈","HUS","HSP","ITP","TTP","간경화","쿠싱"] },
-    f:"격한 운동?" },
-
-  { id:"sys-fatigue", sys:"전신", name:"피로",
-    ddx:["주요우울증","수면장애","만성피로증후군","갑상샘저하증","폐결핵"],
-    c:"어떤 증상을 피로로 보는지 (근력감소·호흡곤란·집중력저하·수면부족·일상지장)",
-    a:{ mn:"전간만빈갑결심우수", items:["전신","간염","만성피로","빈혈","갑상샘","결핵","심부전","우울","수면장애"] },
-    f:"스트레스, 완화, 악화" },
-
-  { id:"sys-wtloss", sys:"전신", name:"체중감소",
-    ddx:["암","결핵","일차성 체중감소","당뇨","갑상샘항진증","신경성 식욕부진"],
-    c:"몇 kg→몇 kg, 인위적으로 조절한 게 있나?",
-    a:{ mn:"전호소신우당크갑", items:["전신","호흡","소화","신경성","우울","당뇨","크롬친화세포종","갑상샘"] },
-    f:"해외여행(기생충), 스트레스" },
-
-  { id:"sys-wtgain", sys:"전신", name:"체중증가",
-    ddx:["일차성 체중증가","약물유발","쿠싱","갑상샘저하증","폐경증후군","PCOS"],
-    c:"몇 kg→몇 kg",
-    a:{ mn:"전쿠P간신수갑심정", items:["전신","쿠싱","PCOS","간경화","신증후군","수면무호흡","갑상샘저하","심부전","정신"] },
-    f:"스트레스" },
-
-  // ───────── 근골격 ─────────
-  { id:"msk-joint", sys:"근골격", name:"관절통증 / 부기",
-    ddx:["급성: 통풍·거짓통풍·감염관절염","만성: 류마티스·루푸스·골관절염","관절외: 유착관절낭염·회전근개·내측측부인대"],
-    c:"TRaSH CLaN (tenderness·redness·swelling·heat·crepitus·LOM·NRS)",
-    a:{ mn:"전류베루쇼반섬", items:["전신","류마티스","베체트","루푸스","쇼그렌","반응관절염","섬유근통증후군"] },
-    f:"전날 과음? 관절 스테로이드? 관절 많이 쓰는 직업?" },
-
-  { id:"msk-neck", sys:"근골격", name:"목통증",
-    ddx:["경추간판탈출증","경추염좌","근막통증증후군"],
-    c:"TRaSH CLaN",
-    a:{ mn:"전추수삼전근", items:["전신","추간판탈출증","수막염","삼차신경통","전방구조물","근막통증증후군"] },
-    f:"자세와 휴식에 따라 완화/악화" },
-
-  { id:"msk-back", sys:"근골격", name:"허리통증",
-    ddx:["요추간판탈출증","요추염좌","척추관협착증","척추종양","강직척추염"],
-    c:"TRaSH CLaN",
-    a:{ mn:"전척추맘강정", items:["전신","척추관협착증","추간판탈출증","마미증후군","강직척추염","정신"] },
-    f:"자세와 휴식에 따라 완화/악화" },
-
-  // ───────── 피부 ─────────
-  { id:"skin-rash", sys:"피부", name:"피부발진",
-    ddx:["바이러스 발진","어루러기","접촉피부염","약물발진","아토피피부염"],
-    c:"양상(모양·수·크기·색·딱지·물집·흰비늘), 동반(Heat·Itch·Tender)",
-    a:{ mn:"전알류감", items:["전신","알레르기","류마티스","감염"] },
-    f:"매·콜·접·음 (매독 / 콜린성두드러기 / 접촉피부염 / 음식알러지)" },
-
-  // ───────── 정신 ─────────
-  { id:"psy-mood", sys:"정신", name:"기분변화",
-    ddx:["주요우울장애","양극성 1형","양극성 2형","순환기분장애","지속성 우울장애"],
-    c:"기분변화가 얼마나 심한지, 일상생활 지장?",
-    a:{ mn:"우양조기", items:["우울","양극성장애","조현병","기질적장애"] },
-    f:"최근 출산? 특별한 스트레스? 계절적 변화?" },
-
-  { id:"psy-anxiety", sys:"정신", name:"불안",
-    ddx:["공황장애","광장공포증","PTSD","범불안장애","강박장애","적응장애","사회불안장애"],
-    c:"불안이 시작된 상황, 불안할 때 드는 생각, 일상생활 지장?",
-    a:{ mn:"광특사공범강적 순천정갑크뇌", items:["광장공포증","특정공포증","사회공포증","공황장애","범불안장애","강박장애","적응장애","순환","천식","조현병","갑상샘항진","크롬친화세포종","뇌전증"] },
-    f:"불안이 더 심해지거나 완화되는 원인?" },
-
-  { id:"psy-sleep", sys:"정신", name:"수면장애",
-    ddx:["불면장애","하루주기율동수면장애","폐쇄수면무호흡","하지불안증후군","야경증","몽유병"],
-    c:"잠들기 전(운동·흡연·음식) / 잠 환경(소음·난방·환기) / 잠 안 오면 무엇을 / 낮잠",
-    a:{ mn:"무하렘 우기 오천전G갑", items:["수면무호흡","하지불안","렘수면","우울","기면","오픈","천식","전립선","GERD","갑상샘"] },
-    f:"못 자는 특별한 요인, 최근 생활패턴 변화, 스트레스" },
-
-  // ───────── 신경 ─────────
-  { id:"neu-memory", sys:"신경", name:"기억력 저하",
-    ddx:["알츠하이머","혈관치매","루이바디치매","가성치매","경도인지장애"],
-    c:"무엇을 기억력저하로 보는지, 최근일/옛날일, 일상지장(단어·돈계산·가스불·길)",
-    a:{ mn:"혈갑레전가수", items:["혈관치매","갑상샘저하","레비소체","전두측두엽","가성치매","수두증"] },
-    f:"스트레스" },
-
-  { id:"neu-vertigo", sys:"신경", name:"어지럼",
-    ddx:["BPPV","전정신경염","메니에르병","소뇌경색"],
-    c:"어떤 식으로 어지러운지, 토?의식?일상생활",
-    a:{ mn:"저비탈정전메소파편", items:["저혈당","BPPV","탈수","정신","전정신경염","메니에르","소뇌경색","파킨슨","편두통"] },
-    f:"완화, 악화" },
-
-  { id:"neu-headache", sys:"신경", name:"두통",
-    ddx:["편두통","긴장두통","군발두통","거미막밑출혈","뇌수막염"],
-    c:"어떻게 아픈지(전기=삼차 / 띠=긴장 / 욱신=편두통 / 깨질듯=뇌출혈), NRS, 일상",
-    a:{ mn:"갈삼편긴군3뇌", items:["갈색세포종","삼차신경통","편두통","긴장두통","군발두통","뇌출혈","뇌종양","뇌감염"] },
-    f:"통증이 더 심해지는 상황" },
-
-  { id:"neu-seizure", sys:"신경", name:"경련",
-    ddx:["열성경련","영아연축","청소년 근간대뇌전증","측두엽뇌전증","외상성 뇌전증","소아기 소발작","뇌수막염"],
-    c:"경련 전(불쾌·답답·치밀어오름·메스꺼움·눈앞깜깜·힘빠짐) / 중(대소변·팔다리떨기·눈돌아감·혀깨물기) / 후(두통·혼란·피로·저림)",
-    a:{ mn:"출신감정", items:["출생시문제","신경","감염","정신"] },
-    f:"청소년 근간대(스트레스·수면부족) / 소아기 소발작(과호흡·빛자극 후)" },
-
-  { id:"neu-weakness", sys:"신경", name:"근력 / 감각이상",
-    ddx:["뇌경색","일과성 허혈발작","거미막밑출혈","뇌내출혈","당뇨병 신경병증","수근관증후군","노신경마비"],
-    c:"포괄/구체, 근력(움직이기 힘듦/정도), 감각(저림·근위부/원위부), 일상지장",
-    a:{ mn:"추신D염중길갑", items:["추간판탈출증","신경","DM","염증성근병증","중증근무력증","길랑바레","갑상샘독성"] },
-    f:"언제 더 심하고 언제 나아지나" },
-
-  { id:"neu-consciousness", sys:"신경", name:"의식장애",
-    ddx:["뇌경색","거미막밑출혈","뇌수막염","저혈당혼수","간성혼수","알코올중독","약물중독"],
-    c:"V/S·GCS(눈·이름·손가락, 8점 이하 intubation, 정맥로 확보, E4V5M6, 보호자 안심) / 의식 잃었을 때 모습(경련·대소변·출혈)",
-    a:{ mn:"전탈신알간수", items:["전신","탈수","신경","알코올·약물중독","간성혼수","수막염"] },
-    f:"—" },
-
-  { id:"neu-tremor", sys:"신경", name:"떨림 / 운동이상",
-    ddx:["파킨슨병","소뇌경색","생리적 떨림","갑상샘항진증"],
-    c:"언제 떨리나 RAPIO(resting·postural·action·intention·orthostatic), 일상 (본태=postural/action, 소뇌=intention 끝부분)",
-    a:{ mn:"뇌파갑정", items:["소뇌경색","파킨슨","갑상샘항진","정신"] },
-    f:"E·P·L (Essential=커피·술 / Physiologic=긴장·격한운동 / Low glycemia=공복)" },
-
-  // ───────── 산부인과 ─────────
-  { id:"obgyn-breastpain", sys:"산부인과", name:"유방통",
-    ddx:["주기유방병증","유선염","유방농양","카페인 유방통"],
-    c:"어떻게 아픈지, NRS, 유방 덩이는 있는지",
-    a:{ mn:"전방두계정", items:["전신","유방","유두","겨드랑이","정신"] },
-    f:"여성력: 월경, 만조유생, 현재 수유" },
-
-  { id:"obgyn-breastmass", sys:"산부인과", name:"유방덩이",
-    ddx:["섬유선종","유방암"],
-    c:"딱·크·개·경·통 (멍울 몇 개·딱딱·경계·크기·통증)",
-    a:{ mn:"전방두계정", items:["전신","유방","유두","겨드랑이","정신"] },
-    f:"여성력: 월경, 만조유생, 현재 수유" },
-
-  { id:"obgyn-discharge", sys:"산부인과", name:"질분비물",
-    ddx:["세균질증","편모충질염","칸디다질염","위축성 질염"],
-    c:"CAT(색·양·냄새[생선=세균/악취=편모충]·양상·피), 일상지장",
-    a:{ mn:"전 외골비워", items:["전신","외음부","골반염","비뇨","위축성질염"] },
-    f:"여성력: 월경, 마지막 성관계, 성관계 통증, 위험한 관계, 피임, 질세척" },
-
-  { id:"obgyn-bleeding", sys:"산부인과", name:"질출혈",
-    ddx:["자궁근종","자궁경부암","자궁내막암","자궁외임신"],
-    c:"CAT(색·양·양상·피), 일상지장",
-    a:{ mn:"전탈출 비매P갑", items:["전신","탈수","출혈","비뇨","Mass","PCOS","갑상샘저하"] },
-    f:"여성력: 월경, 성관계, 피임" },
-
-  { id:"obgyn-menstrual", sys:"산부인과", name:"월경이상",
-    ddx:["PCOS","조기폐경","갑상샘항진증"],
-    c:"여성력: 월경력, 만조유생, 성관계, 초경",
-    a:{ mn:"P터Pan 응정갑 쿠페", items:["PCOS","터너","Prolactinoma","응급","정신","갑상샘항진","쿠싱","조기폐경"] },
-    f:"최근 운동을 심하게 했나? (기능성 시상하부성 무월경)" },
-
-  { id:"obgyn-dysmenorrhea", sys:"산부인과", name:"월경통",
-    ddx:["원발월경통","자궁내막증","자궁근종"],
-    c:"양상, NRS, 월경력, 성관계, 산과력",
-    a:{ mn:"전매운일탈", items:["전신","Mass","운동","일차성","탈수"] },
-    f:"—" },
-
-  { id:"obgyn-prenatal", sys:"산부인과", name:"산전진찰",
-    ddx:["임신고혈압","임신당뇨병","태반조기박리","조기양막파수"],
-    c:"산·월·만·계·예 (산모평가[키·체중·혈액형] / 월경력 / 만조유생[산과력] / 계획 / 예방접종)",
-    a:{ mn:"유입전갑당비", items:["유산","입덧","전자간증","갑상샘","당뇨","비뇨"] },
-    f:"—" }
+  {
+    id:"gi-acute-abd", sys:"소화", name:"급성복통", page:2,
+    old:{"O": "언제, 갑자기, 어떤 상황", "L": "어디, 이동하거나 퍼지는지 뻗치는 곳 있나 (방사통)", "D": "얼마나 지속, 얼마나 자주", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 베쥐타(쥐어짜듯, 타는듯, 베이는듯) , 통증 [정도] NRS, 일상생활",
+    a:{ mn:"전소가비부인", exp:"전신/소화(AA 소속 NV CD HMS JDD)/순환(CD PS)/부인 과(질출혈, 질분비물)/비뇨(혈뇨, 거품뇨, 옆구리통증, 배 뇨통) 부인 (질출혈/질분비물)", items:["전신", "소화", "순환", "부인", "비뇨", "질분비물"] },
+    f:"음식배자 전날 음/식이 포인트 음주(전날과음), 식사전후/식중독, 배뇨배변후, 자세",
+    hx:{"E": "내시경, 초음파", "과": "HTN/DM/DL/Hep", "약": "소염진통제, 피묽약", "가": "암", "여": "임신가능성(LMP)"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절", "Abdomen": "복부시청타촉, 머피, 간비장, CVAT [충수돌기염] Psoas, Obturator", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[상복부] 소화성궤양, 궤양천공, 급성담낭염, 급성췌장염, 복부대동맥류 [하복부] 장폐색, 염증성장질환, 급성충수염, 요관결석, 급 성신우신염, 게실염, 자궁외임신, 난소꼬임, 골반염",
+    tests:"내시경, 흉부X-ray, 염증수치, 전혈구검사",
+    edu:"안심(빨리 잘오셨어요), 입원해서금식, 진통제+수액, 생활 습관(술담커)",
+  },
+  {
+    id:"gi-dyspepsia", sys:"소화", name:"만성복통/소화불량", page:2,
+    old:{"O": "언제, 갑자기, 어떤상황", "L": "어디, 이동하거나 퍼지는지", "D": "얼마나 지속, 얼마나 자주", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 쥐어짜듯, 타는듯, 더부룩, 통증 [정도] NRS, 일상생활",
+    a:{ mn:"전소 G 아이우유", exp:"전신/소화(AA 소속 NV CD HMS JDD)/GERD(신물, 기 침)/IBS(배변습관변화, 배변후완화)/젖당불내증(우유마신 후)", items:["전신", "소화", "GERD", "IBS", "젖당불내증"] },
+    f:"음식배자 평소에 음식배자가 포인트 음주, 식사전후/기름진음식/식중독, 배뇨배변후, 자세",
+    hx:{"E": "내시경, 초음파", "과": "HTN/DM/DL/Hep", "약": "소염진통제, 피묽약", "가": "암", "여": "임신가능성(LMP)"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절", "Abdomen": "복부시청타촉, 머피, 간비장", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[기능성] 기능성소화불량, 젖당불내증, 과민대장중후군, 당뇨 병성위마비, 약물 [기질성] 위식도역류질환, 위염/위궤양, 위암, 담석증, 만성담 낭염, 만성췌장염, 염증성장질환",
+    tests:"내시경, 헬리코박터균, 전혈구검사",
+    edu:"PPI 아침식사30 분전에, 생활습관(술담커, 유산소운동, 체중 조절, 규칙적 식습관), 위암 국가암검진(40 세이상 위내시경 2 년마다)",
+    emerg:"토혈혈변",
+  },
+  {
+    id:"gi-hematemesis", sys:"소화", name:"토혈", page:2,
+    old:{"O": "언제부터, 갑자기, 어떤상황", "L": "어디서(코/입)", "D": "얼마나 자주 =횟수", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 양(종이컵), 색(검붉은/선홍색), 내용(거품/가래/음식), 객혈과감별(기침하다가) [정도] 일상생활",
+    a:{ mn:"전소 탈출 GVM", exp:"전신/소화(AA 소속 NV CD HMS JDD)/탈수/출혈/GERD(신물, 기침)/Varix(황달, 복부팽만, 소변대변색)/Mallory(토하기 전 과음) +심하게 구토", items:["전신", "소화", "탈수", "출혈", "GERD", "Varix", "Mallory"] },
+    hx:{"E": "내시경, 초음파", "과": "간질환", "약": "소염진통제, 피묽약", "가": "암"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절, 비경", "Abdomen": "복부시청타촉, 간비장, 복수-퍼덕떨림", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[식도] 말로리바이스증후군, 식도정맥류, 식도암 [위] 위궤양, 십이지장궤양, 위암, 위식도역류질환 [기타] 응고장애, NSAID, 아스피린, 항응고제",
+    tests:"내시경, 흉부X-ray, 전혈구검사, 간기능검사, 혈액응고검사",
+    edu:"안심(빨리 잘오셨어요), 수액공급, 응급내시경, 생활습관(술담 커), 진통제복용주의, 위암 국가암검진(40 세이상 위내시경 2 년마다)",
+    emerg:"어지럼, 두근거림, 호흡곤란",
+  },
+  {
+    id:"gi-hematochezia", sys:"소화", name:"혈변", page:2,
+    old:{"O": "언제부터", "D": "얼마나 자주", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 양(변기가득/휴지에), 색(선홍/검은), 점도(끈적) [정도] 일상생활",
+    a:{ mn:"전소 탈출 결항식", exp:"전신/소화/탈수/출혈/결장직장암(뒤무직, 변굵기변화, 복부종 괴)/항문(배변시 항문통증, 튀어나오는덩이)/식중독", items:["전신", "소화", "탈수", "출혈", "결장직장암", "항문", "식중독"] },
+    hx:{"E": "내시경, 초음파", "외": "항문", "약": "소염진통제, 피묽약, 항생제", "가": "암"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절", "Abdomen": "복부시청타촉, DRE", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[위장관] 위궤양, 염증성장질환, 대장암, 게실출혈, 허혈결장 염, 급성위장관염, 소아폴립, 메켈게실 [항문] 치핵, 항문열창 [응고장애] NSAID, 아스피린, 항응고제, 간질환",
+    tests:"전혈구검사, 염증수치, 대장내시경, 복부X-ray/CT",
+    edu:"대장내시경 금식, V/S 불안정(맥박이 빠른데 출혈량이 많다 는 의미. 상태안정위해 수액공급 및 수혈 필요), 생활습관(섬 유소 섭취), 대장암 국가암검진(만50 세이상, 매년 분변잠혈 검사), 배변습관",
+    emerg:"어지럼, 두근거림, 호흡곤란",
+  },
+  {
+    id:"gi-vomiting", sys:"소화", name:"구토", page:3,
+    old:{"O": "언제부터, 갑자기, 어떤 상황", "D": "몇번", "Co": "점점", "Ex": "이전에도"},
+    c:"&헛구역질 [양상] 양, 색(녹색), 내용(음식/피), 메스꺼움/분출성 [정도] 일상생활 메스꺼움이 있어야 보통 진짜 구토. 없으면 보통 막힘/역류/운동장애",
+    a:{ mn:"전소탈피 요정식신", exp:"전신/소화(AA 소속 NV CD HMS JDD)/탈수/요독증(가려 목마름, 소변량 감소 움, 거품뇨)/정신(고의적구토)/식중독(여행, 날것, 평소안 +스트레스로 심해지냐? (상한음식) 먹던음식, 같이식사한사람)/신경(어지럼의식, 두통, 말어 눌팔다리, 경련)", items:["전신", "소화", "탈수", "요독증", "정신", "식중독", "신경"] },
+    f:"- 식사와 관련성?",
+    hx:{"E": "내시경, 초음파", "외": "복부수술(장폐색)", "약": "소염진통제, 아스피린", "가": "암", "여": "LMP, 임신가능성 (입덧일 수 있으니)"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절", "Abdomen": "복부시청타촉", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[소화] 식중독, 위염, 위궤양, 십이시장궤양, 유문부폐 쇄, 위암, 장폐색증 [신경] 양성돌발체위현기증, 뇌수막염, 뇌출혈, 뇌종양 [소아] 비대날문협착증, 장중첩증 유문협착증은 비담즙성 [기타] 요독증, 신경성폭식증, 신경성식욕부진증, 임신",
+    tests:"혈액(혈구/염증수치/전해질), 대변배양, 복부 X-ray",
+    edu:"수액치료, 항구토제는 최소한으로, 식중독예방(손씻기, 음식), 위암 국가암검진(40 세이상 위내시경 2 년마다)",
+    emerg:"어지럼, 호흡곤란",
+  },
+  {
+    id:"gi-bowel", sys:"소화", name:"변비", page:3,
+    old:{"O": "언제부터, 갑자기", "D": "얼마나 자주 변 몇 번 봤고? 그 중 설사나 변비 몇 번? (기본횟수몇번)", "Co": "점점", "Ex": "이전에도"},
+    c:"오래핸드폰보는 손님딱막잔가실 [배변습관] 오래참기, 핸드폰보면서 [양상] 손가락으로 긁어, 힘을 과하게, 딱딱, 항문막힌느 낌, 잔변감, 가느다란, 실금 A 소화기에서 복통 [정도] 일상생활 NRS도",
+    a:{ mn:"전소 아이 항암 갑정", exp:"전신/소화(AA 소속 NV CD HMS)/IBS(설사동반, 배변후 복통 완화)/결장직장암(복부종괴)/갑상샘저하(추위불내성, 피부 푸석)/직장류(밑이빠지는느낌, 자연분만력) 정신 기분/불안/수면문제/스트레스(F가능)", items:["전신", "소화", "IBS", "결장직장암", "갑상샘저하", "직장류", "불안", "수면문제", "스트레스"] },
+    hx:{"E": "내시경, 초음파", "약": "변비약, 마약성진통제, 철분제, 항콜린제 -->정신과약, 감기/알레르기/콧물약, 과민성방광약 etc.", "사": "물, 채소", "가": "암"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절, 갑상샘", "Abdomen": "복부시청타촉, DRE", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[일차성] 기능성변비, 과민대장증후군, 골반저기능이상, 직 장류, 직장탈출증 [이차성] 대장암, 갑상선저하, 당뇨병성신경병증, 약물",
+    tests:"복수X-ray, 대장통과시간, 대장내시경, 갑상샘",
+    edu:"생활습관(규칙적식사, 운동, 채소물 많이), 배변습관(5 분 이내로 앉아있기, 발뒤꿈치 들고), 변비약남용(둘코락스= 자극성하제=장기간 복용할 경우 배변 반사신경이 둔화되 어 변비 악화), 대장암국가암검진(만50 세이상, 매년 분변 잠혈검사)",
+  },
+  {
+    id:"gi-diarrhea", sys:"소화", name:"설사", page:3,
+    c:"[양상] 양(변기가득), 색, 내용(수양성/점액성, 기름, 피), 뒤무직, 항문통증/덩이 [정도] 일상생활 꼭 물어보자 반드시",
+    a:{ mn:"전소 아이 항탈 갑정 우유식", exp:"전신/소화(AA 소속 NV CD HMS)/탈수/IBS(배변후 복통 완화, 설사변비 번갈아)/젖당불내증(우유마신 후)/갑상샘 항진(더위, 두근)/식중독(여행, 날것, 평소안먹던음식, 같이 식사한사람, 과음과식) 식중독: 과여날안같 (과연날안갖고배겨?)", items:["전신", "소화", "탈수", "IBS", "젖당불내증", "갑상샘", "식중독"] },
+    f:"- 길버트-->",
+    hx:{"E": "내시경, 초음파", "약": "지사제, 항생제", "사": "물, 맵거나 기름진 음식", "가": "암"},
+    ddx:"[급성<2 주] 식중독, 허혈결장염, 거짓막결장염, 약물 [만성>4 주] 젖당불내증, 과민대장증후군, 염증성장질환, 흡수장애, 만성췌장염, 갑상선항진 +복부X-ray (암은 CT까지)",
+    tests:"혈액(혈구/염증수치/전해질), 갑상샘기능, 대변배양",
+    edu:"수액, 지사제남용(억지로 장 운동을 멈추는 지사제를 과 하게 쓰면, 세균이나 독소가 못빠져나옴), 생활습관(우유, 카페인, 술), 식중독 예방(손씻기, 음식), 저포드맵식단(장 에서 가스를 많이 만드는 음식들 콩, 우유, 밀가루 등을 피하기)",
+    emerg:"어지럼, 호흡곤란, 고열",
+  },
+  {
+    id:"gi-jaundice", sys:"소화", name:"황달", page:3,
+    old:{"O": "언제부터", "L": "어디가, 처음 노래진곳. 퍼져나가는지", "Co": "점점", "Ex": "이전에도"},
+    c:"+눈/피부 노래짐 [양상] 색(샛노란, 녹황색), 소변색변화(진해졌는지), 대변색변화(회색 변), 가려움, 가성황달(최근녹황색채소=귤,당근) [정도] 일상생활",
+    a:{ mn:"전소탈출", exp:"전신/소화(AA 소속 NV CD HMS JDD)/탈수/출혈", items:["전신", "소화", "탈수", "출혈"] },
+    f:"스운 스운 해여 해여 성 성수 수 (OS 가 레지, 여A-성B-수C) 스트레스, 운동, 해산물, 여행, 성관계, 수혈(C 형), 가성황달",
+    hx:{"E": "A형 B형 내시경, 초음파", "과": "간질환", "약": "타이레놀, 한약건기식, 결핵약", "가": "암, 간질환, 용혈질환"},
+    pe:{"General": "V/S, 노랗게 된 부분 보여주세요 + 거미혈관종 확인 위해 가슴까지 옷 올려보기", "HEENT": "눈, 입, 경부림프절", "Abdomen": "복부 시청타촉, 머피, 간비장, 복수-퍼덕떨림", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[간] 급성바이러스성간염, 독성간염, 알코올성간염, 간경화-간암, 길 버트증후군, 윌슨병, 자가면역성간염, 비알코올성지방간질환 [담췌] 담관돌, 담관염, 담관암/췌두부암, 만성췌장염 [기타] 가성황달, 용혈성질환, 감염단핵구증",
+    tests:"간기능검사, 간염바이러스표지자검사, 복부CT/초음파",
+    edu:"가려움 심할 경우 콜레스티라민(담즙 배출을 도와줌), 한약건기식조 심, 생활습관(금주, 운동), 간염예방접종(A 형,B 형), 간암 국가암검진 (40 세이상 간경변or B 형C 형 보균자, 6 개월마다 초음파+피검사)",
+  },
+  {
+    id:"cv-chestpain", sys:"순환", name:"가슴통증", page:5,
+    old:{"O": "언제, 갑자기, 어떤상황", "L": "어디, 방사통(어깨, 팔) 심근경색-왼어깨/팔 대동맥박리-등 (찢어지는 양상-췌장과 차이)", "D": "얼마나지속, 얼마나자주 20-30분이상 지속되면 MI 의심", "Co": "점점", "Ex": "이전에도"},
+    c:"협심증 [양상] +조이는, 쥐어짜듯, 짓누르는 찌르듯, 찢어지듯, 타는듯, 심내막염, 기흉 대동맥 박리 압통 위식도역류",
+    a:{ mn:"전순 대감호소 포정", exp:"전신/순환(CD PS 부종)/대동맥박리(말판, 식 은땀)/호흡(기침, 가래, 호흡곤란, 객혈)/소 화(소화불량,속쓰림)/대상포진(피부발진)/정 +물집 신(죽을것 같은 공포, 불안) /심낭(막)염 (최근감기)", items:["전신", "순환", "대동맥박리", "호흡", "대상포진", "심낭염"] },
+    f:"자식운 음심기 협심증류 모두 운동 스트레스 추위에 악화 자세, 식사, 운동, 음주, 심호흡, 기침",
+    hx:{"E": "음주 후 새벽 들이쉴 때 / 기침할 때 더 아프면 흉막염 --> 변이형 호흡 시/누우면 악화 + 앞으로 숙이면 완화 = 심막염", "외": "오래누워(PTE)", "약": "피임약, 소염진통제 , NTG", "가": "뇌/심장, 급사+당시나이"},
+    pe:{"General": "V/S", "HEENT": "+경정맥압 상승 -> 심낭압전, 눈, 입, 경동맥청진 심실경색, PTE, 긴장성기흉", "Chest": "발진/압통, 심음, 폐시촉타청", "Abdomen": "복부시청타촉(GERD 의심시)", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[순환기] 안정협심증, 불안정협심증, 변이협 심증, 급성심근경색, 심막염, 대동맥박리 [호흡기] 보통 20분 폐색전증, 이상인 경우 많음 기흉, 폐렴, 흉막염, +심근염 [기타] GERD, 대상포진, 갈비연골염, 정신",
+    tests:"심전도, 심근효소, X-ray/CT, 심초음파",
+    edu:"증상있을 때 잘왔다, 생활습관(금연금주, 운 동 주3 회 30 분이상, 혈압조절)",
+    emerg:"쉬거나 약먹어도 흉통 지속",
+  },
+  {
+    id:"cv-syncope", sys:"순환", name:"실신", page:5,
+    old:{"O": "언제, 갑자기, 어떤상황(미기배)", "L": "어디서, 쓰러지며 다친곳", "D": "얼마나지속, 얼마나자주", "Co": "점점", "Ex": "이전에도 순 저당 정 신"},
+    c:"[실신전] 눈앞캄캄, 메스꺼움, 식은땀, 어지럼 눈앞 번쩍 / 이상한 맛이나 냄새 --> 경련 [실신중] 목격자? 눈고개돌아감, 혀깨물, 팔다리 떨거나 경직, 대소변 , 의식을 완전히 잃었나?",
+    a:{ mn:"전순탈 저당정신 미기배", exp:"전신(체중변화, 피로, 부종)/순환(CDPS)/탈수(어지 럼)/저혈량(출혈, 구토설사, 토혈혈변, 월경과다)/저 혈당(손떨림, 식은땀, 최근밥 못먹음)/정신(불안, 공 포)/신경(두통구토, 시야말어눌, 팔다리힘빠짐)/미 주신경성(오래서있음, 더움)/기립성(일어설 때 어지 럼)/배뇨실신(대소변)", items:["전신", "순환", "탈수", "저혈량", "정신", "신경", "기립성", "배뇨실신"] },
+    hx:{"약": "혈압약, 당뇨약, 전립샘약 (알파차단제_혈관확장)", "가": "뇌/심장, 급사+당시나이"},
+    pe:{"General": "V/S, 두부외상", "HEENT": "눈, 입, 경동맥청진", "Chest": "심음", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[자율신경] 미주신경성실신, 기립저혈압, 배뇨실신 [심장] 부정맥(서맥/빈맥), 비대심근병증, 심근경색 [뇌] 일과성허혈발작, 지주막하출혈 [기타] 빈혈, 탈수, 저혈당, 공황장애",
+    tests:"심전도, 뇌CT/MRI, 기립경검사",
+    edu:"실신상황피하기(더운곳, 사람많은곳, 일어날때 천 천히), 머리보호(전조증상 있으면 쪼그려), 주변사 람교육(머리 한쪽으로 돌려 흡인방지, 옷 느슨하 게)",
+    emerg:"팔다리 힘빠짐, 심한 두통",
+  },
+  {
+    id:"cv-palpitation", sys:"순환", name:"두근거림", page:5,
+    old:{"O": "언제부터, 갑자기, 어떤상황", "D": "얼마나지속, 얼마나자주", "Co": "심해짐", "Ex": "이전에도"},
+    c:"[측정] 맥박 직접 측정해본적 [양상] 규칙적, 갑자기, - 찬물세수/숨참기, 소변마",
+    a:{ mn:"전순탈 저당정크갑(두쫀쿠말고 두정크)", exp:"전신/순환(흉통, 호흡곤란, 실신)/탈수/저혈량(출 혈, 구토설사, 토혈혈변, 월경과다)/저혈당(손떨 림, 식은땀, 최근밥 못먹음)/정신(죽을것같은공 포, 불안)/크롬(두통,식은땀)/갑상샘항진(더위, 설 사)", items:["전신", "순환", "탈수", "저혈량", "저혈당", "정신", "크롬", "갑상샘항진"] },
+    f:"악화: 운자피불술커스 (인자 피 볼 서커스 해보까) -->생리적 빈맥 or 심방/심실 조기수축 악화 or 특히음주는 AF도 유발,악화 운동, 음주 운동 자세 피로 불안 술 커피 스트레스 완화: 숨참기/찬물세수=미주신경자극법--> PSVT(특히 AVNRT/AVRT)",
+    hx:{"사": "카페인", "가": "뇌/심장, 급사+당시나이", "여": "폐경(홍조,짜증,예민)"},
+    pe:{"General": "V/S, 맥박측정 목 혈관 소리 들어볼게요", "HEENT": "Bell, 숨 들이마쉬고 잠깐 참도록 눈, 입, 갑상샘, 경동맥청진 한쪽씩 청진, 아래에서 위로 (쇄골->턱아래)", "Chest": "심음 • 심음/경동맥 청진은 아예 눕혀도 됨 BUT 경정맥압은 30-45도(호흡곤란, 흉통, 실신/어지럼, 두근거림)", "Abdomen": "• 좌측 decubitus apex(MS 구르는소리) BELL로!! - • 숨 내쉬고 멈춘 후 앞으로 숙여앉기(AR) diagphragm", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[순환기] 생리적빈맥, 발작성상심실성빈맥, 심실 세동, 심실조기수축, 심부전 [내분비] 갑상샘항진, 저혈당, 크롬친화세포종 [기타] 빈혈, 탈수, 약물, 폐경, 공황장애",
+    tests:"심전도, 24 시간심전도, 갑상샘",
+    edu:"안심(반드시 심장 문제는 아니다), 부정맥설명 (심장의 전기신호 이상), 생활습관(커피, 술담배), PSVT(목마사지, 숨참기, 찬물세수) 발살바요법: 45도 누워 숨을 크게 들이마쉰 뒤 입/코 막고 대변 볼 때처럼 배에 힘을 주면서 10초정도 세게 내쉬려고 해봐라 and thene 다리들어올리면 정맥환류 더 증가해서",
+    emerg:"어지럼, 쓰러질 것 같으면",
+  },
+  {
+    id:"cv-htn", sys:"순환", name:"고혈압", page:5,
+    old:{"O": "언제부터", "L": "혈압 어디서측정 • LDL", "D": "• TG - • LDL", "Ex": "이전 고혈압 진단, 약복용, 조절여부"},
+    c:"[측정] 10 분이상휴식, 측정전 술담커운, 다른곳",
+    a:{ mn:"키몸허 + 전 수갑 알쿠크 뇌눈심콩", exp:"전신(체중변화, 피로)/신부전(거품뇨, 부종, 소변 =콩팥 량)/수면무호흡(코골이, 잘 낮에 졸리고피곤)/갑상샘 자도 항진(더위)/쿠싱(자색선조, 얼굴동글)/크롬(두근 +배 쪽만 살찜 거림, +설사 두통, 식은땀)/알도스테론증(근무력)/눈심 +피로,손발저림 뇌(시야시력, 말어눌, 팔다리힘빠짐, 흉통) +두통 +호흡곤란 (CD)", items:["전신", "신부전", "수면무호흡", "갑상샘", "쿠싱", "크롬", "알도스테론증", "표적기관"] },
+    hx:{"약": "스테로이드 , 한약", "사": "규칙적? 식습관, 짜거나 기름진? 운동 어떤 운동, 주 몇 회, 한 번에 얼마나", "가": "뇌/심장, 급사+당시나이", "여": "폐경(홍조,짜증,예민) 최근 분만? 임신가능성? (임신전후/분만 후 정상?)"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 갑상샘, 경동맥청진", "Chest": "심음", "Abdomen": "복부시청타촉(신동맥잡음,부신종괴)", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"일차성) 본태고혈압, 백의고혈압, 임신성고혈압 이차성) 크롬친화세포종, 갑상샘항진, 일차성알 도스테론증, 신동맥협착, 만성신부전, 쿠싱 기타) 폐경, 약물",
+    tests:"갑상샘, 소변검사, 복부CT, 24 시간활동혈압",
+    edu:"합병증위험(심근경색, 심부전, 망막변화, 신부전), 목표혈압(140/90), 지속적약물복용, 자가혈압측 정, 생활습관(싱겁게, 유산소, 감량, 금연금주) 굿",
+  },
+  {
+    id:"cv-dyslipid", sys:"순환", name:"이상지질혈증", page:5,
+    old:{"O": "언제 -> 검사결과지(240/200/160)", "L": "- >190이면 이차성 확인, 반드시", "D": "상승 시 신증후군, 당뇨, 쿠싱 - 상승 시 갑기저 / 이뇨제 면역억제제", "Ex": "이전 고지혈증 진단,"},
+    c:"BMI >23 과체중, >25 비만 허리둘레 남자 >90,여자>85 [측정] 검사전 과음과식,",
+    a:{ mn:"키몸허(현재/이전) 전 수갑 간신 쿠당 심뇌가", exp:"전신(체중변화, 피로)/신증후군(거품뇨, 변량변화)/수면무호흡(코골이, 갑상샘저하(추위, 변비, 여드름)/당뇨(다음, 다뇨, 눌, 팔다리힘빠짐) /", items:["전신", "신증후군", "수면무호흡", "당뇨"] },
+    hx:{"E": "이전 건강검진?", "외": "당뇨/고혈압, 간/신질환, 심/뇌혈관질환,", "과": "다낭성난소증후군 진단받은적?", "약": "한스 스테로이드 입에(이베) 호피", "사": "규칙적? 짜거나 기름진? 탄수화물? 식습관, 운동 어떤 운동, 주", "가": "뇌/심장(남<55, 여<65),", "여": "폐경(홍조,짜증,예민)"},
+    pe:{"General": "V/S, 황색종(손바닥,팔꿈치,아킬레스건)", "HEENT": "눈, 입, 갑상샘, 경동맥청진", "Chest": "심음", "Abdomen": "복부시청타촉(간비장,", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"일차성) 일차성 고콜레스테롤혈증, 가족성 고콜레스테롤혈증 이차성) 약물, 신증후군,",
+    tests:"갑상샘기능검사, 신장기능검사,",
+    edu:"대사증후군, 합병증위험(심근경색, (지금부터라도 관리하면 (160/130/100=DM/70/55), 주5회 유산소, 하루1시간 이상/ 감량, CAD있으면 금연금주) 55, 당뇨나",
+    emerg:"- 어지러움 의식변화, 호흡곤란흉통, 약 부작용 콜라색 소변, 근육통 + 간기능검사",
+  },
+  {
+    id:"resp-cough", sys:"호흡", name:"기침", page:4,
+    old:{"O": "언제부터, 어떤상황", "D": "얼마나자주", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 마른기침vs 가래(양,색,점도,피) [정도] 일상생활",
+    a:{ mn:"전활(호+알) 부순 소", exp:"전신/호흡/알레르기비염(재채기, 눈코가려움)/부비동염 (얼굴압통, 후각저하, 목뒤로코흐름)/순환(CD, 부종)/소 +누런콧물 CD (Chest Discomfort) 화(신물, 속쓰림)", items:["전신", "호흡", "알레르기비염", "부비동염", "순환"] },
+    hx:{"과": "알레르기, 천식, 아토피 / 결핵, 폐질환", "약": "고혈압약(ACEi), 당뇨약(DPP4i)", "사": "환경, 직업력", "가": "알레르기, 천식, 아토피 / 결핵, 폐질환"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절, 비경, 부비동압통", "Chest": "심음, 폐시촉타청", "Extermity": "곤봉지, 청색증, 피부긴장도, 부종"},
+    ddx:"[급성<3 주] 상기도감염, 급성기관지염, 부비동염, 폐렴 [아급성] 감염후기침 [만성>8 주] 상기도기침증후군, 만성기관지염, 결핵, 천 식, 만성폐쇄성폐질환, 사이질폐질환/진폐증, 폐암, 위식 도역류질환, 약물(ACEi, DPP4i), 심부전",
+    tests:"코내시경, 흉부X-ray, 부비동X-ray, 폐기능검사",
+    edu:"금연상담권유, 마스크, 환경관리(집안청소자주, 이불매 트리스 주1 회세탁), 독감/폐렴구균 예방접종",
+    emerg:"심한 호흡곤란",
+  },
+  {
+    id:"resp-rhinorrhea", sys:"호흡", name:"콧물/코막힘", page:4,
+    old:{"O": "언제부터, 어떤상황", "L": "양쪽/한쪽", "D": "얼마나지속, 하루몇번", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 맑고투명/노란찐득, 양색냄새, 피, 코막힘 [정도] 일상생활",
+    a:{ mn:"전호 알부", exp:"전신/호흡(기침가래, 코막힘, 인후통이물감)/알레르기비염(재 채기, 눈코가려움)/부비동염(얼굴압통, 후각저하, 목뒤로코흐 름)", items:["전신", "호흡", "알레르기비염", "부비동염"] },
+    hx:{"외": "머리, 코에이물질", "과": "알레르기, 천식, 아토피 / 결핵, 폐질환", "사": "환경, 직업력", "가": "알레르기, 천식, 아토피 / 결핵, 폐질환"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절, 비경, 부비동압통", "Chest": "폐시촉타청", "Extermity": "곤봉지, 청색증, 피부긴장도, 부종"},
+    ddx:"[알레르기] 알레르기비염 [감염] 상기도감염, 부비동염 [기타] 혈관운동성비염, 약물유발비염(ACEi, NSAIDs, 국소혈 관수축제), 부비동종양, 외상, 이물, 뇌척수액콧물",
+    tests:"코내시경, 피부따끔검사, 혈청특이IgE, 부비동X-ray",
+    edu:"원인회피(알레르기, 추운곳, 뜨거운음식), 비충혈제거제/항히 스타민제, 마스크, 환경관리(집안청소자주, 이불매트리스 주 1 회 세탁, 가습기공기청정기), 독감/폐렴구균 예방접종",
+  },
+  {
+    id:"resp-hemoptysis", sys:"호흡", name:"객혈", page:4,
+    old:{"O": "언제부터, 갑자기, 어떤상황", "L": "코/입", "D": "얼마나지속, 하루몇번", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 양(종이컵/스푼/묻어나옴), 색(선홍/검붉은), 내용(거 1회에 100-150ml (종이컵 1/2-1컵 이상이면 품/음식) OR 하루종일 400ml 이상 (2컵 이상) 대량객혈 [정도] 일상생활",
+    a:{ mn:"전호탈출순", exp:"전신/호흡/탈수/출혈(평소멍, 양치할때 피, 코피안멎음)/순환 (흉통, 부종) 폐고혈압 시 객혈 가능", items:["전신", "호흡", "탈수", "출혈", "순환"] },
+    hx:{"외": "오래누워(PTE)", "과": "결핵, 폐질환", "약": "피묽약", "사": "환경, 직업력", "가": "결핵, 폐질환"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절, 비경", "Chest": "심음, 폐시촉타청", "Extermity": "점상출혈멍, 곤봉지, 청색증, 피부긴장도, 부종"},
+    ddx:"[소량] 만성기관지염, 폐결핵, 폐암, 폐색전증, 폐렴 [대량] 기관지확장증, 아스페길루스증, 폐흡충증 [기타] 식도정맥류출혈, 응고장애",
+    tests:"흉부X-ray/CT, 객담항산균도말검사",
+    edu:"결핵은 법정감염병이므로 2 주 격리, 금연, 마스크, 환경관 리, 독감/폐렴구균 예방접종",
+    emerg:"대량객혈(종이컵 한컵 이상) 150mL",
+  },
+  {
+    id:"resp-dyspnea", sys:"호흡", name:"호흡곤란", page:4,
+    old:{"O": "언제부터, 갑자기, 어떤상황", "D": "얼마나 지속, 하루몇번", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 들숨(상기도) vs 날숨(하기도) [정도] mMRC(등산,계단/평지,동년배/100m/옷갈아입을때) 등산후 또래랑 100m걷고 옷갈아입기",
+    a:{ mn:"전호탈 심정알기 갑(호탈이~심정)", exp:"전신/호흡/탈수/심부전(부종, 흉통, 두근실신)/정신(죽을것같은 공포감, 불안)/알레르기(알레르기, 입술부종, 두드러기)/기흉(흡 기시가슴통증, 키몸무게)/갑상샘항진(더위, 설사)", items:["전신", "호흡", "탈수", "심부전", "정신", "알레르기", "기흉", "갑상샘항진"] },
+    hx:{"E": "독감, 폐렴 예방접종", "외": "오래누워(PTE)", "과": "알레르기, 천식, 아토피 / 결핵, 폐질환", "사": "환경, 직업력(탄광/공사장)", "가": "알레르기, 천식, 아토피 / 결핵, 폐질환"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절, 갑상샘", "Chest": "심음, 폐시촉타청, Homan’s sign(PTE) 누워서 다리 굽히고 받치고 발목 dorsi flexion", "Extermity": "곤봉지, 청색증, 피부긴장도, 부종"},
+    ddx:"[급성] 폐색전증, 기흉, 폐렴, 아나필락시스, 공황장애, 과다환 기증후군, 심장막염/심근염 [만성] 천식, 만성폐쇄성폐질환, 사이질폐질환/진폐증, 기관지 확장증, 심부전, 빈혈, 갑상선항진증",
+    tests:"흉부X-ray/CT, 동맥혈가스검사, 폐기능검사",
+    edu:"금연, 마스크, 환경관리, 독감/폐렴구균 예방접종",
+    emerg:"심한 호흡곤란이나 입술 파래지면 몸에 이상 심한 호흡곤란, 급성악화 있는 걸 수 있으니 바로 병원",
+  },
+  {
+    id:"uro-polyuria", sys:"비뇨신장/내분비", name:"소변량변화 (다뇨/핍뇨)", page:6,
+    old:{"O": "언제부터, 갑자기", "D": "하루에 소변 몇번, 이전에는 몇번 정상 하루 5-6회", "Co": "점점", "Ex": "이전에도"},
+    a:{ mn:"전비 탈중 원한당 /전비탈 저요 옆아래로 피횡", exp:"전신/비뇨/탈수/원발다음증(물많이 마심?, 왜?)/ 전신/비뇨/탈수/저혈량(식욕저하, 구토설사, 혈변토혈)/ 중추성요붕증(두통, 시야장애, 근력저하)/당뇨(다 요독증(구역구토, 가려움)/PSGN+IgAN(최근 감기)/횡문 음, 다갈) 근융해증(근육통, 과로, 심한운동, 사우나) 옆구리/아랫배 통증 & 덩이", items:["전신", "비뇨", "탈수", "원발다음증", "저혈량", "중추성요붕증", "당뇨", "PSGN/IgA신증", "횡문근융해증"] },
+    f:"- -",
+    hx:{"E": "이전 건강검진 신장/소변검사 이상", "외": "요도나 하복부 쪽 다친거나 최근 시술 or 수술?, 도뇨관 삽입, 척추외상", "과": "HTN/DM, 콩팥, 전립선 HTN/DM, 콩팥, 전립선", "약": "혈당이리(혈압약, 당뇨약, 이뇨제, 리튬) 항항조소(항생제, 항암제, 조영제, 소염진통제)", "사": "물/짜게, 커피녹차 물/짜게", "가": "당뇨, 콩팥 당뇨, 콩팥", "여": "출산시 출혈 -"},
+    pe:{"General": "V/S V/S", "HEENT": "눈, 입 눈, 입", "Chest": "- 심음, 호흡음", "Abdomen": "복부시청타촉, 신동맥청진, 치골상부촉진, CVAT 복부시청타촉, 신동맥청진, 치골상부촉진, CVAT, DRE", "Extermity": "피부긴장도, 오목부종 피부긴강도, 오목부종 여자면 골반내진도"},
+    ddx:"[신전성] 혈량저하증, ACEi/ARB, 심부전 당뇨병, 원발다음증, 중추요붕증, 신장기원요붕 [신성] 약물(NSAID, 항생제, 조영제), PSGN, 당뇨병성신 증, 만성신부전, 폐쇄후이뇨, 이뇨제, 커피 병증, 급성신우신염, 횡문근융해증 -에 의한 급성신손상 [신후성] 양성전립샘비대, 전립샘암",
+    tests:"소변검사, 혈당검사, 당화혈색소 소변검사, 신장기능검사, 초음파 콩팥초음파, 혈액검사(신기능+전해질)",
+    edu:"24시간소변량검사(?), 수분제한검사, 바소프레신 검사, 콩 팥초음파, 혈액검사 (신장기능, 전해질), 혈중항이뇨호르 약물교체(신독성이 있는약이므로 중단하고 다른약으로 카페인녹차 줄이기, 물은 하루 1.5L, 당뇨 생활 교체), 충분한수분보충(물 1.5L 이상, 음료수보다는 물), 습관 관리 설명꿀팁: 카페인-방광자극가능 / 금연금주(특히방광암 카페인녹차줄이기, 전립샘압박자세(너무오래앉아 있거 금연중요) / 당뇨관리(식후 30분 유산소) 나 자전거 타는 자세), 치료: 탈수/전해질 교정 위해 수액치료 (V/S 문제시 반드시 입원) 치료: 탈수/전해질 교정 위해 수액치료 (V/S 문제시 반드시 입원) 필요 시 도뇨관 삽관(응급) (방광 하부요로 폐쇄 or 방광배출장애(신경인성)에 의한 요폐 진단 및 치료)",
+    emerg:"탈수증상 (급격한 소변량 감소, 어지러움, 두근거림) 소변이 계속 안나오거나 요독증 증상 시 응급투석",
+  },
+  {
+    id:"uro-hematuria", sys:"비뇨신장/내분비", name:"붉은색 소변", page:6,
+    old:{"O": "언제부터, 갑자기", "D": "하루에 화장실 몇번 -> 피 몇번 + 소변 보는 횟수 변화 있는지도", "Co": "점점", "Ex": "이전에도"},
+    a:{ mn:"전비탈출 방신외 피(PI)횡", exp:"전신/비뇨/탈수/출혈경향/방광염(치골상부통증, 소변자주참음)/신 우신염+요로결석(옆구리통증)/외음부(외음부통증가려움, 분비물, + 요도주변상처, 질/항문쪽 분비물이나 출혈 성관계파트너)/ PSGN+IgAN(최근감기)/횡문근융해증(근육통, 과 로, 심한운동, 사우나) / SLE (관절통, 피부발진)", items:["전신", "비뇨", "탈수", "출혈경향", "방광염", "외음부", "항문", "PSGN/IgA신증", "횡문근융해증", "SLE"] },
+    f:"- • 이전 건강검진 신장/소변검사 이상",
+    hx:{"E": "• 요도나 하복부 쪽 다친거나 최근 시술 or 수술? / 도뇨관?", "과": "HTN/DM, 콩팥, 전립선 /비뇨, 결핵/혈액응고질환 +DL", "약": "스리피(스타틴, 리팜핀, 피묽약) +장기간 소염진통제", "사": "물/짜게 술담(커), 소변오래참는습관, 직업(염색공장)_무통성혈뇨에선 방광암 가능해서 중요 음식(DDx. 가성혈뇨): 붉은 음식/황록색 채소", "가": "당뇨, 콩팥, 혈뇨, 암, 청력 (alport syndrome)", "여": "생리주기관련성 현재 생리중? 임신가능성/자궁내장치? 질세척/탐폰? (모두 질출혈 DDx.)"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절", "Chest": "하복부(치골상부) 까먹지말기!!", "Abdomen": "복부시청타촉, 신동맥청진, 치골상부촉진, CVAT, DRE, 성기진찰", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[하부요로] 요로결석, 방광염, 방광암, 양성전립샘비대, 전립샘염, 전립샘암 [상부요로] IgA 신병증, PSGN, 급성신우신염, 신장암 [가성혈뇨] 횡문근융해증, 리팜핀, 스타틴",
+    tests:"소변검사, 초음파, X-ray, 방광내시경 , 혈액검사",
+    edu:"(신기능검사/전해질검사/ 수액치료, 요로결석예방(물많이마시기, 저염식), 방광염예방(2~3 일에 한번 질세정제로, 소변 오래 참지말기, 성관계 전 씻기, 대 변 보고 앞에서 뒤로 닦기), 정기적인소변검사",
+    emerg:"소변이 안나오거나 탈수증상",
+  },
+  {
+    id:"uro-voiding", sys:"비뇨신장/내분비", name:"배뇨이상", page:6,
+    old:{"O": "언제부터, 갑자기, 어떤상황", "D": "하루에 소변 몇번, 증상 몇번", "Co": "점점", "Ex": "이전에도 NRS"},
+    a:{ mn:"전비 방신외 자신과당", exp:"전신/비뇨/방광염(치골상부통증, 소변참음)/신우신염(옆구리통증)/외음 부(외음부통증가려움, 분비물, 성관계파트너)/자궁탈출증(아래가 빠지 는 느낌, 변실금, 자연분만력)/신경성방광(팔다리감각이상, 힘빠짐)/과 민방광(추으면 악화)/당뇨(다음, 다뇨, 다갈)", items:["전신", "비뇨", "방광염", "신우신염", "외음부", "자궁탈출증", "신경성방광", "당뇨"] },
+    hx:{"과": "당뇨, 비뇨기과/산부인과", "약": "이뇨제", "사": "물/짜게", "여": "자연분만력"},
+    pe:{"General": "V/S", "HEENT": "눈, 입", "Abdomen": "복부시청타촉, 신동맥청진, 치골상부촉진, CVAT, DRE, 성기진찰", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[배뇨통] 요도염/질염/전립샘염, 방광염, 요로결석 [빈뇨] 과민방광, 양성전립샘비대, 전립샘암, 방광암, 자궁근종 [요실금] 복압요실금, 절박요실금, 혼합요실금, 당뇨병성신경병증, 정 상압수두증, 약물",
+    tests:"소변검사, 초음파, 요역동학검사",
+    edu:"방광염예방(2~3 일에 한번 질세정제로, 소변 오래 참지말기, 성관계 전 씻기, 대변 보고 앞에서 뒤로 닦기), 전립샘압박자세(너무오래앉아 있거나 자전거 타는 자세), 케겔운동(다리는 골반넓이만큼 벌리고 숨 을 들이마쉬고 멈춘뒤 질 주위를 수축. 숨을 천천히 내쉬면서 천천히 이완), 방광훈련(배뇨하는 시간주기를 정해놓고 지키기, 점점늘려가며, 단순히 참는게 아니라 명상 등 주의를 돌리기, 이중배뇨-자연적으로 배출 후 힘줘서 다시배출) 복압성: 복압상승을 골반저근이 못 버티는거라 골반저근운동(케겔)이나 절박성: 방광훈련이나 불필요한 수축 막는 항무스카린제(약물)",
+    emerg:"일류성: 요폐해소(도뇨관, CT 등) 혼합성: 복압성+절박성 --> 더 우세한게 뭔지 확인 후 그것부터 치료",
+  },
+  {
+    id:"sys-wtgain", sys:"비뇨신장/내분비", name:"체중증가/비만", page:7,
+    old:{"O": "언제부터, 얼마나, 갑자기", "L": "어디에(눈주위/얼굴/팔다리/전체적)", "Co": "점점", "Ex": "이전에도"},
+    c:"원래 / 지금 키, 몸무게, 허리둘레(33) 1개월 2kg, 6개월 간 5%? 운동량/식사량 변화 붓는건 아닌가? 자주 붓는 편?",
+    a:{ mn:"전 수갑 간신 쿠피심정", exp:"전신/수면무호흡(코골이, 낮에졸림)/갑상샘저하 (추위, 변비)/쿠싱(얼굴, 자색선조)/PCOS(여드름, 털)/간경변(황달, 복수)/신부전(소변량감소, 거품 뇨)/심부전(호흡곤란, 가슴통증)/정신(우울, 불안)", items:["전신", "수면무호흡", "갑상샘저하", "쿠싱", "PCOS", "간경변", "신부전", "심부전", "정신"] },
+    hx:{"E": "이전 건강검진 간/신장/심장", "과": "정신과 DM HTN DL", "약": "정신과약, 스테로이드, 한약건기식", "사": "야식/기름진음식 최근 스트레스? / 평소 운동, 식습관(주식/야식 등)", "가": "비만 DM HTN", "여": "임신가능성, 폐경여부 월경 규칙적?"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 갑상샘", "Chest": "심음, 호흡음", "Abdomen": "복부시청타촉, 간", "Extermity": "피부긴장도, 부종"},
+    ddx:"[일차성] 일차성 체중증가, 특발성부종 [내분비] 갑상샘저하, 쿠싱증후군, 폐경후증후군, 다낭성난소증후군, 대사증후군 [혈류량증가] 심부전, 신부전, 신증후군, 간경화 [정신] 우울증, 폭식증 [기타] 약물(여성호르몬, 스테로이드 BB)",
+    tests:"혈당, 콜레스테롤, 갑상샘검사",
+    edu:"의미있는 체중증가(6~12 개월 5kg, 한달 2kg), 비만합병증(심뇌혈관, 대사증후군), 약처방? 다른 원인 배제하고 처방해드리겠다. 그래도 생활습 관교정은 해야함",
+  },
+  {
+    id:"sys-fever", sys:"전신증상/근골격", name:"발열", page:7,
+    old:{"O": "언제부터, 갑자기", "D": "계속or 호전악화, 주기", "Co": "점점", "Ex": "이전에도 -> 해열제? 효과?"},
+    c:"[측정] 직접 재보았는지, 어떻게, 몇도 [정도] 일상생활",
+    a:{ mn:"전탈 호소 비피신부", exp:"전신(체중변화, 붓기)/탈수/호흡/소화(복통 소화불량, 구토설사, 황달)/비뇨(FUND, 혈 뇨, 옆구리통증)/피부(발진, 관절통, 근육 통)/신경(의식, 두통, 목뻣뻣, 팔다리힘빠 짐)/부인과(질출혈, 질분비물)", items:["전신", "탈수", "호흡", "소화", "비뇨", "피부", "신경", "부인과"] },
+    f:"단식해성말라쯔 단체생활주변사람, 식중독(안먹던음식, 날 것), 해외여행, 성관계, 말라리아(강원도경기 북부, 모기), 쯔쯔가무시(야외활동, 진드기)",
+    hx:{"E": "독감 예방접종", "과": "자가면역질환, 암", "약": "최근 먹기 시작한 약", "사": "직업", "여": "질분비물, 임신가능성"},
+    pe:{"General": "V/S, 피부전체(발진, 벌레물린곳)", "HEENT": "눈, 입, 경부림프절", "Chest": "폐시촉타청", "Abdomen": "복부시청타촉, 간비장, CVAT", "Extermity": "피부긴장도, 부종"},
+    ddx:"[호흡기감염] 인플루엔자 [소화기감염] 장티푸스, 급성위장관염 [비뇨기감염] 급성신우신염 [신경계감염] 뇌수막염 [기타감염] 말라리아, 쯔즈가무시, 연조직염 [비감염] 약물유발열, 림프종, 백혈병",
+    tests:"전혈구검사, 염증수치, 혈액배양",
+    edu:"외출후 손씻기, 마스크, 유행지역 방문시 예방접종, 독감예방접종, 법정감염병(12 급 은 격리, 123 급은 보건소신고)",
+    emerg:"고열, 심한설사, 탈수증상",
+  },
+  {
+    id:"sys-bruise", sys:"전신증상/근골격", name:"쉽게멍이듦", page:7,
+    old:{"O": "언제부터, 갑자기, 어떤상황(부딪히지 않아도)", "L": "어디(피부vs 관절), 처음생긴곳", "D": "얼마나 지속 생기고 계속 있냐 / 생겼다 없어지냐", "Co": "점점 점점더 오래 남아있냐 / 점점 더 많아지냐", "Ex": "이전에도"},
+    c:"+가려우면 피부발진 가능성 발열 발적은 혈관염 계열 vs 자반 구분 (피부인지도) [양상] 크모개색(누르면하얗게) 발발부통(발열, 발 적, 부종, 통증가려움) 작고 여러개면 혈소판, 크면 응고인자 눌러서 사라지면 홍반 / 안 사라지면 자반 선홍색 최근, 보라푸른 purpura(멍=자반), 노랑갈색 오래된 멍 (진짜 멍은 납작함)",
+    a:{ mn:"전탈출 HHit 간쿠", exp:"전신/탈수/출혈경향(코피잇몸피, 피안멎음)/HUS(핍 Hemolytic uremic syndrome 뇨, 혈뇨, 설사)/HSP(복통, 관절통)/ITP(최근감기, IgA혈관염-->장혈관염, 관절침범 면역혈소판감소자반병(감염이후) 기침가래, 콧물목아픔)/TTP(의식저하, 두통, 시야장 혈전성혈소판감소자반병-->신경계로 가면 애)/간경화(황달, 복수)/쿠싱(자색선조, 여드름, 월 경이상)", items:["전신", "탈수", "출혈경향", "HUS", "HSP", "ITP", "TTP", "간경화", "쿠싱"] },
+    f:"부딪히거나 다쳐서 생겨? - 격렬한 운동?",
+    hx:{"E": "건강검진 간 쪽 문제? 혈액검사이상?", "과": "간질환 + HTN/DM, 암/자가면역, 혈액질환/빈혈", "약": "아응/소스/한건 피묽약, 스테로이드, 한약건기식 (아스피린, 항응고제 / 소염진통제, 스테로이드 / 한건)", "사": "술 (알코올성 간질환 염두) / 담배", "가": "간질환, 혈우병/혈액암", "여": "월경량"},
+    pe:{"General": "V/S, 멍시촉, 관절운동성 압통, 열감 확인", "HEENT": "눈, 입, 경부림프절 눈, 피부 황달!!", "Abdomen": "복부시청타촉, 간비장, 복수퍼덕떨림 +복수 이동둔탁음", "Extermity": "피부긴장도, 부종"},
+    ddx:"[응고인자] 간질환, 항응고제, 혈우병 [혈소판] 면역혈소판감소자반병, 혈전성혈소판감소 자반증, 용혈요독증후군, 백혈병, 파종혈관내응고, 아스피린 아스피린은 혈소판 기능을 떨어뜨림 [혈관] 헤노흐-쉰라인자반병, 쿠싱증후군",
+    tests:"전혈구검사, 혈액응고검사, 간기능검사 (+복부초음파)",
+    edu:"안심시키기, 활동제한(과격한활동자제, 양치 부드 럽게, 전기면도기사용), 약물주의(소염진통제, 아스 피린), 수술이나 발치시 의사와 상담",
+    emerg:"탈수증상, 코피안멎음, 객혈",
+  },
+  {
+    id:"sys-fatigue", sys:"전신증상/근골격", name:"피로", page:7,
+    old:{"O": "언제부터, 갑자기, 어떤상황", "D": "계속or 호전악화, 아침or 밤", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 어떤증상을 피로하다 하는지(근력저하, 빨리지침, 졸림, 집중력저하) [정도] 일상생활",
+    a:{ mn:"전 순호쿠 간만 우수신 갑당", exp:"전신/순환/호흡/갑상샘저하(변비, 추위)/만성간 염(황달, 복수, 간비대)/만성피로증후군(인후통 기억력저하다발관절통경부림프절근육통두통운동후권태감잠자도 피곤, 4 개+6 개월)/우울증(우울, 의욕저하, 자살 사고)/수면장애(수면시간, 잠드는데오래, 자다 가깸, 키몸무게, 코골이)", items:["전신", "순환", "호흡", "갑상샘저하", "만성간염", "만성피로증후군", "우울증", "수면장애"] },
+    hx:{"과": "정신과, 간", "사": "채식", "가": "결핵, 암", "여": "월경량"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절, 갑상샘", "Chest": "심음, 호흡음", "Abdomen": "복부시청타촉, 간", "Extermity": "피부긴장도, 부종"},
+    ddx:"[정상] 일과성피로 [정신] 수면장애, 만성피로증후군, 우울증 [내분비] 갑상샘저하, 부신기능저하 [순환] 빈혈, 울혈심부전 [호흡] 결핵 [소화] 만성간염",
+    tests:"갑상샘검사, 간기능검사",
+    edu:"운동, 규칙적인 식사, 수면위생, 술담커 끊기, 철분제는 식전에 복용, 만성피로증후군(인지 행동치료, 점진적운동요법, 항우울제/진통제)",
+  },
+  {
+    id:"sys-wtloss", sys:"전신증상/근골격", name:"체중감소", page:7,
+    old:{"O": "언제부터, 얼마나, 갑자기", "D": "계속", "Co": "점점", "Ex": "이전에도"},
+    c:"키, 몸무게, 허리둘레 의도적 체중감소(운동/식사량조절)",
+    a:{ mn:"전 호소신우 당크갑", exp:"전신/호흡/소화/신경성식욕부진(본인의 체형에 대 한 생각, 일부러 구토)/우울(우울, 불안)/당뇨병(다 음, 다갈, 다뇨)/크롬(두통, 두근, 발한, 기립성저혈 압)/갑상샘항진(더위, 설사)", items:["전신", "호흡", "소화", "신경성식욕부진", "우울", "당뇨병", "크롬", "갑상샘항진"] },
+    f:"기생충(해외여행, 날것)",
+    hx:{"과": "정신과", "약": "다이어트약, 정신과약", "가": "결핵, 암, 당뇨", "여": "임신가능성"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절, 갑상샘", "Chest": "심음, 호흡음", "Abdomen": "복부시청타촉, 간, DRE", "Extermity": "피부긴장도, 부종"},
+    ddx:"[일차성] 일차성 체중감소 [호흡] 결핵, 만성폐쇄폐질환 [내분비] 당뇨병, 갑상샘항진, 크롬친화세포종 [소화기] 위염/위암, 염증성장질환, 과민대장증후군 [정신] 우울증, 신경성식욕부진 [기타] 기생충감염, 약물",
+    tests:"염증수치, 갑상샘검사, X-ray",
+    edu:"의미있는 체중감소(6~12 개월 5k, 한달 2kg), 생활 습관(스트레스해소, 규칙적식사, 적당한휴식), 거식 증 위험성(골다공증, 불임, 근력약화), 잘못된 생각 교정(다시 정상체중으로 돌아가는 것임)",
+  },
+  {
+    id:"neu-vertigo", sys:"전신증상/근골격", name:"어지럼", page:10,
+    old:{"O": "언제부터, 갑자기, 어떤상황, 하루중언제(아침-BPPV)", "L": "1-2분 BPPV (이석증)", "D": "10분 소뇌경색 얼마나지속, 얼마나자주 30분-수시간 메니에르", "Co": "점점", "Ex": "이전에도"},
+    c:"주변이 빙빙 --> 전정기관 눈앞 깜깜 쓰러질 것 같음 --> 비전정기관(뇌) [양상] 어떤느낌(빙빙, 아찔, NV, 실신) [정도] 일상생활 얼마나 심하냐. 서있기 힘듦? 몸이 기울어짐? 넘어지거나 의식 잃은 적?",
+    a:{ mn:"전 탈 BM 전소 파불저당", exp:"전신/BPPV(자세따라, 고개돌릴때)/메니에르(이명, 이충만감 이통, 청력저하)/전정신경염(최근감기)/소뇌경색(두통구토, 시 야, 시야, 말어눌팔다리, 경련목뻣뻣)/파킨슨(손떨림, 보행장 애)/불안(우울, 불안, 숨가쁨)/저혈량(목마름, 두근거림, 구토, 설사)/저혈당(식사, 식은땀)", items:["전신", "BPPV", "메니에르", "전정신경염", "소뇌경색", "파킨슨", "불안", "저혈량", "저혈당"] },
+    f:"악화, 완화 F 어지러운 상황? 앉았다 일어설 때 / 누울 때, 고개돌릴 때, 덥거나, 오래 서 있다가 갑자기",
+    hx:{"과": "HTN/DM/DL", "약": "혈압약, 당뇨약, 전립선약", "사": "채식", "가": "뇌졸중", "여": "여자면 월경량/기간 변화, 월경주기와 연관성"},
+    pe:{"General": "V/S 목 디스크 있는지 확인 후 코만 보라고 하고. 바로 정면 주시 못하면 전정신경염(말초)", "HEENT": "눈, 입, 경동맥청진, 자발안진, 두부충동, 청력 린네(골->공기) / 웨버(정수리)", "Chest": "-골/병변 더 크게: 전도성 - “저를 --> 전정신경염(말초), 보세요” 소뇌경색(중추) -공기/정상 더 크게: 감각신경성"},
+    ddx:"[중추성] 소뇌경색, 파킨슨병, 전정편두통 [기타] 기립저혈압, 저혈당, 빈혈, 당뇨병신경병증",
+    tests:"뇌CT, 비디오안진검사, 청력검사, 전정기능검사, 기립경검사 혈당측정",
+    edu:"외상조심(안전한 장소에 앉거나 누워 휴식), 이석증재발예방 (상체를 45 도정도 높인 자세로 하루 쉬기), 메니에르병 저 염식이뇨제, 생활습관(금연금주, 충분한 수면)",
+    emerg:"의식잃음, 계속 어지럼",
+  },
+  {
+    id:"msk-joint", sys:"전신증상/근골격", name:"관절통증/부기", page:8,
+    old:{"O": "언제부터(6 주), 갑자기, 어떤상황(아침/활동중)", "L": "어디가, 방사통, 이동 염증성 대칭/퇴행성 비대칭", "D": "얼마나지속, 하루몇번", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 조조 발발부통 욱뻣비움(욱씬, 뻣뻣, 비빔소리, 움직임제한) 1. [양상] 어떤식으로 아프냐(욱신,찌름,깊게) [정도] 2. 조조(지속시간)의 NRS TRaSH_CLaN (tenderness, redness, Swelling, Heat, crepitus, LOM, NRS) 3. 일상생활 (만성일 경우) 양측성 / 조조강직 30분이상 / 움직일수록 완화: 염증성 관절염(대표 RA)",
+    a:{ mn:"전 류베루쇼반섬 IGO", exp:"전신/류마티스(호흡곤란, 마른기침)/베체트(구강성기 궤양)/루푸스(얼 나비모양 굴발진, 햇빛알러지, 추운곳에서 손끝하얘짐)/쇼그렌(입눈마름)/반응관 절염(감기기운, 설사, 배뇨통)/섬유근통(우울불안, 수면장애, 온몸이쑤 심)/ Infection(관절주사)/Gout(전날과음)/OA(많이사용, 쉬면나아짐)", items:["전신", "류마티스", "베체트", "루푸스", "쇼그렌", "반응관절염", "섬유근통", "Infection", "Gout", "OA"] },
+    f:"사무자운 무거운거 들기 등 사고, 무리한신체활동, 자세(굽힘/젖힘), 운동(휴식/움직임)",
+    hx:{"과": "자가면역질환, 안과(포도막염) d/t 반응관절염, 관절염", "약": "소염진통제, 스테로이드 골다공증, 괴사 등 유발 가능", "사": "직업(관절많이 쓰는지) , 운동", "가": "자가면역질환, 골관절염", "여": "유산(항인지질증후군), 임신계획"},
+    pe:{"General": "V/S, 피부발진", "HEENT": "눈(포도막염), 입(구강건조, 궤양)", "Chest": "심음, 호흡음(류마티스)", "Abdomen": "생식기궤양(베체트)"},
+    ddx:"[급성관절염] 통풍, 거짓통풍, 감염관절염, 반응관절염, 외상관절염 [만성관절염] 골관절염, 류마티스관절염, 전신홍반루푸스, 쇼그렌증후 군, 베체트병 [관절외-무릎] 측부인대손상, 반월연골판손상, 십자인대손상, 윤활막염 [관절외-어깨] 유착관절낭염=오십견(능동수동모두X), 회전근개증후군 (능동만X), 석회화건염(운동범위는보존)",
+    tests:"문제 관절부위 혈액(염증수치), X-ray, MRI, 관절천자",
+    edu:"진통제, 물리치료, 쇼그렌(무설탕 사탕껌, 인공눈물), 무거운 물건 들 기 자제, 적당한운동, 체중조절, 금연금주, 임신계획",
+  },
+  {
+    id:"msk-neck", sys:"전신증상/근골격", name:"목통증/허리통증", page:8,
+    old:{"O": "언제부터, 갑자기, 어떤상황", "L": "어디가(다른관절여부), 방사통", "D": "얼마나지속, 하루몇번", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 조조 발발부통 욱뻣비움(욱씬, 뻣뻣, 비빔소리, 움직임제한) [정도] NRS",
+    a:{ mn:"전 추수삼전근 / 전 척추맘강정", exp:"전신/척추관협착증(오래 걸으면 아파서 쉼, 젖히 전신/추간판(팔손 힘약해짐, 둔한느낌)/수막염(두 면 아픔)/추간판(다리 근력저하, 감각저하)/마미 통, 목뻣뻣, 감기증상)/삼차신경통(얼굴이 찌르듯 증후군(요실금변실금, 항문주위감각이상)/강직척 아픔)/전방구조물(목소리변화, 침삼킬때어려움)/ 추염(아침에뻣뻣, 움직이면완화, 포도막염)/정신 근막통증증후군(땀이나고 털이 곤두섬) (우울)", items:["전신", "척추관협착증", "추간판", "수막염", "마미증후군", "삼차신경통", "강직척추염", "전방구조물", "강직척추염", "정신"] },
+    f:"사무자운 사고, 무리한신체활동, 자세(굽힘=추간판/젖힘=척추관협착), 운동(움직이면호전=류마티스)",
+    hx:{"과": "자가면역질환, 안과(포도막염), 골다공증", "약": "소염진통제, 스테로이드", "사": "운동, 직업(평소자세)", "가": "자가면역질환, 골관절염"},
+    pe:{"General": "V/S V/S", "HEENT": "- -", "Chest": "- -", "Abdomen": "- -"},
+    ddx:"[신경] 추간판탈출증, 척추관협착증, 척추종양, [신경] 추간판탈출증, 척추관협착증, 척추종양 마미증후군 [신경외] 경추염좌, 근막통증증후군, 류마티스관 [신경외] 요추염좌, 요추압박골절, 강직척추염, 절염, 채찍질손상, 수막염, 삼차신경통 골관절염",
+    tests:"혈액(염증수치), X-ray, MRI",
+    edu:"안심(대부분 약물치료, 물리치료로 호전), 낮은베개, 바른자세, 스트레칭, 적당한운동, 금주금연",
+    emerg:"요실금변실금, 팔다리힘빠짐",
+  },
+  {
+    id:"skin-rash", sys:"전신증상/근골격", name:"피부발진", page:8,
+    old:{"O": "언제부터, 갑자기, 어떤상황(땀)", "L": "어디, 퍼진곳", "D": "얼마나지속, 얼마나자주", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 크모개색(누르면하얗게) 발발부통 비물딱(비늘, 물집, 딱지) [정도] 일상생활",
+    a:{ mn:"전 알류감 매콜접음", exp:"전신/알레르기(입술부종)/류마티스(관절통, 햇빛알러지, 구강성기궤양)/ 감염(주변사람, 감기, 기침가래, 인후통, 호흡곤란, 오심구토, 설사혈변)/ 매독(처음만난사람과 성관계)/콜린성(운동, 온수목욕)/접촉피부염(특정 물건, 비누화장품바꿈, 염색, 새로운옷)/음식알레르기(발진 나기전 먹은 음식)", items:["전신", "알레르기", "류마티스", "감염", "매독", "콜린성", "접촉피부염", "음식알레르기"] },
+    f:"단식해성말라쯔 단체/주변사람, 식중독, 해외, 성관계",
+    hx:{"과": "알레르기, 아토피, 천식", "약": "새로먹은약, 건기식", "가": "알레르기, 아토피, 천식"},
+    pe:{"General": "V/S, 전신피부시촉, 피부묘기증(설압자), 니콜스키징후(면봉)", "HEENT": "눈, 입(구강궤양), 경부림프절, 부종", "Chest": "심음, 호흡음"},
+    ddx:"[감염] 홍역, 수두, 수족구병, 2 기매독, 대상포진, 옴, 어루러기, 백선 [알레르기] 접촉피부염, 아토피피부염, 약물발진, 결절홍반, 콜린성두드 러기, 피부묘기증, 한랭두드러기 [류마티스] 전신홍반루푸스, 베체트병, 피부근염",
+    tests:"피부확대경, 피부따끔검사, 첩포검사, 우드등검사, 운동유발검사, PCR",
+    edu:"피부 청결과 보습(보습제, 꽉조이는 옷 피하기, 가려워도 긁지말기), 원 인물질 회피, 손씻기, 마스크, 예방접종",
+  },
+  {
+    id:"obgyn-breastpain", sys:"생식/출산", name:"유방통/유방덩이", page:12,
+    old:{"O": "언제부터, 갑자기, 어떤상황", "L": "어디, 방사통", "D": "얼마나자주, 월경주기관련성", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 덩이(크모개, 딱딱, 움직임, 경계, 압통) / 통증(어떤느낌, 만져지는멍울) [정도] NRS, 일상생활",
+    a:{ mn:"전 유유림정", exp:"전신/유방(열감발적, 부종함몰)/유두(함몰, 분비물)/ 림프절(겨드랑이멍울, 압통)/정신", items:["전신", "유방", "유두", "림프절", "정신"] },
+    hx:{"E": "유방촬영", "약": "피임약, 여성호르몬", "사": "카페인, 고지방식", "가": "여성암"},
+    pe:{"General": "V/S", "Chest": "시진(가만히-머리손-허리손-앞으로기대서), 림프절 촉진(겨드랑이-쇄골), 유방촉진(외-내-내-외), 유두"},
+    ddx:"[유방덩이] 섬유선종, 유방낭종, 유방암, 관내유두 종, 젖낭종 [유방통] 생리적유방통(카페인), 섬유낭성변화, 유 선염, 유방농양, 유방울혈, 유방외상",
+    tests:"유방촬영술, 유방초음파, 세침흡인술",
+    edu:"통증완화(핫팩찜질, 마사지, 심하면진통제), 생리주 기관련성(호르몬변화로 생길수 있으니 안심), 생활 습관(커피, 음주, 고지방), 샤워하면서 자가검진, 40 세이상2 년마다 유방촬영술",
+  },
+  {
+    id:"obgyn-discharge", sys:"생식/출산", name:"질분비물", page:12,
+    old:{"O": "언제부터, 갑자기, 어떤상황", "D": "얼마나자주, 월경주기관련성", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 양, 색, 냄새, 점도, 피 [정도] 일상생활",
+    a:{ mn:"전 외골비위", exp:"전신/외음부(가려움, 통증, 뭐가남)/골반염(골 반, 아랫배통증)/비뇨(FUND)/위축성질염(식은 땀, 홍조, 질건조증, 성교통)", items:["전신", "외음부", "골반염", "비뇨", "위축성질염"] },
+    hx:{"E": "자궁경부세포진검사", "과": "골반염/방광염", "약": "피임약, 여성호르몬", "가": "여성암"},
+    pe:{"General": "V/S", "HEENT": "눈, 입", "Abdomen": "복부시청타촉, 골반내진, 질분비물검사", "Extermity": "피부긴장도"},
+    ddx:"[성매개감염] 편모충질염, 자궁경부염, 골반염 [비성매개감염] 세균성질염, 칸디다질염 [비감염성] 위축성질염",
+    tests:"질분비물검사, 염증수치, 온혈구검사",
+    edu:"세균성질염은 성병 아님, 질세척(너무 잦은 질세척은 질 내부 산성환경 유지에 좋지 않 음. 일주일에 2~3 번. 전용질세정제), 성관계 전후 소변, 정기적 산부인과 검진, 성병파트 너치료",
+  },
+  {
+    id:"obgyn-bleeding", sys:"생식/출산", name:"질출혈", page:12,
+    c:"[양상] 양, 색, 냄새, 핏덩이, 질분비물 [정도] 일상생활",
+    a:{ mn:"전탈출 피갑 위근", exp:"전신/탈수/출혈/PCOS(여드름, 다모증)/자궁근 종(FUND, 복부덩이, 복통)/갑상샘저하(추위, 변비)/위축성질염(식은땀, 홍조, 질건조증, 성 교통)", items:["전신", "탈수", "출혈", "PCOS", "자궁근종", "갑상샘저하", "위축성질염"] },
+    pe:{"General": "V/S", "HEENT": "눈, 입, 갑상샘", "Abdomen": "복부시청타촉, 골반내진, 자궁경부도말검사", "Extermity": "피부긴장도"},
+    ddx:"[산부인과] 다낭낭소증후군, 자궁근종, 자궁샘 근육증, 자궁경부암, 자궁내막증, 자궁내막암, 자궁경부염(STD), 위축성질염, 호르몬제제, 기 능성자궁충혈, 자궁외임신, 유산 [전신] 갑상샘저하증, 응고질환",
+    tests:"초음파, MRI, 자궁경부세포진검사, 염증수치",
+    edu:"질세척(너무 잦은 질세척은 질 내부 산성환경 유지에 좋지 않으며 세균성 질증의 원인. 일 주일에 2~3 번. 비누보단 전용질세정제), 성관 계 전후 소변, 정기적 산부인과 검진, 자궁경 부암 국가암검진",
+    emerg:"어지럼, 호흡곤란",
+  },
+  {
+    id:"obgyn-menstrual", sys:"생식/출산", name:"무월경/희발월경", page:12,
+    old:{"O": "언제부터", "Ex": "이전에도"},
+    a:{ mn:"전 P터프 쿠폐폐 웅정갑", exp:"전신/PCOS(여드름, 다모증)/터너(키체중, 유방음 모발달)/Prolactinoma(젖흐름, 두통시야장애)/쿠 싱(얼굴동글, 자색선조)/폐경(홍조식은땀, 예민불 면)/폐쇄(주기적복통)/웅급(복통, 어지럼)/정신(다 이어트, 스트레스, 우울)/갑상샘저하(추위, 변비)", items:["전신", "PCOS", "터너", "폐경", "폐쇄", "응급", "정신", "갑상샘저하"] },
+    hx:{"E": "자궁경부세포진검사", "과": "골반염/방광염", "약": "피임약, 여성호르몬, 정신과약물", "가": "조기폐경, 여성암"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 갑상샘", "Chest": "유방발달/젖흐름", "Abdomen": "복부시청타촉, 골반내진, 자궁경부도말", "Extermity": "피부긴장도"},
+    ddx:"[일차성] 터너증후군, 처녀막막힘증 [이차성] 다낭난소증후군, 조기폐경, 자궁내막유 착증, 프로락틴분비종양, 쿠싱증후군, 갑상샘저 하, 신경성식욕부진, 임신",
+    tests:"임신확인검사, 초음파, 갑상샘기능, 성호르몬",
+    edu:"정기적 산부인과 검진, 조기폐경위험성(여성호 르몬 부족으로 골다공증, 심혈관질환 위험이 커 져 호르몬치료가 필요), 가임력보존(난자냉동/기 증), 경구피임약금기(흡연, 혈전과거력, 유방암, 간질환)",
+    emerg:"배아픔, 어지럼",
+  },
+  {
+    id:"obgyn-dysmenorrhea", sys:"생식/출산", name:"월경통/월경과다", page:12,
+    old:{"O": "언제부터", "L": "어디가", "D": "지속, 생리주기 중 언제", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 월경량, 통증양상, 평상시복통 [정도] NRS, 일상생활",
+    a:{ mn:"전탈출 원근", exp:"전신/탈수/출혈/원발성(하복부압통, 오심구토, 설 사)/자궁근종(FUND, 복부덩이)", items:["전신", "탈수", "출혈", "원발성", "자궁근종"] },
+    pe:{"General": "V/S", "HEENT": "눈, 입", "Abdomen": "복부시청타촉, CVAT, 골반내진, 자궁경부도말", "Extermity": "피부긴장도"},
+    ddx:"원발원경통, 자궁내막증, 자궁근종, 자궁샘근육 증, 자궁내장치",
+    tests:"온혈구검사, 질초음파, 복부초음파",
+    edu:"어지럼 수액치료, 정기적 산부인과 검진, 월경 통에는 타이레놀보다 NSAID, 경구피임약금기 (흡연, 혈전과거력, 유방암, 간질환)",
+    emerg:"어지럼, 호흡곤란",
+  },
+  {
+    id:"obgyn-prenatal", sys:"생식/출산", name:"산전진찰", page:13,
+    old:{"주호소": "지금까지 산전진찰(둔위, 전치태반), 애기는 잘 놀고있나요? 재방문: 주규 마이불편? OLDCoEx 주수 / 규칙적진찰 / 마지막진찰 / 진찰시 이상 (태아, 태반, 혈압, 양수, 혈당) / 불편한 점 (OLDCoEx) 월산계예 키체중은 임신 전 & 현재, 최근 체중변화 / 혈액형은 Rh까지. 근데 남편 혈액형은 그렇게 중요하진 않음 키체중, 혈액형, 남편혈액형 주기, 기간, 양, 통 --> 평소월경량 / 월경통에 대해선 굳이.. (첫방문 아니라면)"},
+    c:"산과력 만조유생, 출산시문제, 이전임신시 문제 1. 자녀 몇명? 몇주에/어떻게 출산? 2. 조산이나 유산? 이유/몇주에/방법 3. 이전 임신/출산에서 산모/태아문제 원하던임신, 피임 평소 피임 방법도 그렇게까지 필수는 아니지만.. 산모(DM, HTN 등) 피임약/호르몬제제, 자궁 내 장치 등) 태아(선천기형, 유전질환 (계획된) 풍풍비(풍진, 파상풍, B 형간염) Tdap (파상풍 디프테리아 백일해) 27-36주 매임신마다 1회 맞아야하므로 이전에 맞았어도.. B형간염은 풍진은 면역여부 전 통 유입전당갑비 비질 (먹으면) 갑당이 입덧과 혈압(전자간증) 오름 부종을 전신 체중에서 물어보거나 +배뭉침, 태동유무 & 변화(15주~) 질분비물, 질출혈, 색양통증)/입덧(NV, 속쓰림)/전자간증(혈",
+    a:{ mn:"전 통 비질 갑당이 입덧과 혈압오름", exp:"두통, 시야장애, 호흡곤란, 거품뇨)/당뇨(혈당, 다음, 다갈, 다뇨)/갑상샘 +경련 항진 & 저하 두근, 설사)/비뇨(FUND, 옆구리통증, 외음부) 변비/설사,", items:[] },
+    f:"두근/손떨림)",
+    hx:{"E": "(HPV자궁경부암 검진)", "외": "부인과시술, 자궁내장치 , 골반 쪽 외상, 임신 중 Xray/CT", "과": ", 갑상선/뇌전증, 성병/산부인과질환", "약": "달전~4 개월), 철분(20 주이후), 고혈압약/뇌전증약", "사": "중 술/담배/카페인음료?", "가": "유전질환 당뇨/고혈압"},
+    pe:{"HEENT": "입, 갑상샘 피부긴장도", "Chest": "호흡음 하복부까지 포함 분기] 복부시청타촉, CVAT, 초음파 주수 상관없이 질출혈/분비물 시 질경검사+분비물검사", "Abdomen": "+자궁저부길이 분기] 레오폴드, 도플러, 초음파, 자궁(부속기) 골반내진(금기:전치태반) 이상 확인", "Extermity": "비슷하게 부으면 physiologic. 편측이면 고혈압에 의한 폐색전증 확인 갑작스럽고 다른 동반증상 있으면 전자간증 의심 분기] 정상임신, 입덧, 절박유산, 계류유산, 불가피유산 분기] 임신고혈압, 전자간증, 임신당뇨병, 태반조기박리, 전치태반,"},
+    ddx:"조기진통, 정상분만진통 급성신우신염, 급성충수돌기염 산전진찰(~28 주 1 달마다, ~36 주 2 주마다, 37 주부터 매주), 주, 15~20 주), 활동 너무 자제할 필요는 없음, 필요 입원권유 형성되는 시기, 약물복용 전 상담, 약간의 질출혈 및 경미한 복통 정상, 입덧 시 여러번에 걸쳐 먹기, 항구토제는 안정성 입증됨 완성되는 시기이므로 태교, 20 주 이후부터는 철분제 복용 않게 조심, 굽높은 신발 자제, 제왕절개 가능성 설명",
+    emerg:"심한복통, 질출혈/질분비물, 두통/시야장애 따라 기간맞춰 안내하기 (-28주까진 4주, -36주까진 2주, -1주) 선별검사 위해 온 사람: 무월경 확인 위해 소변임신반응검사?? 1분기 소변검사, 항체, 풍진매독B형간염 HIV 검사 이상 시 가능한 확진검사: 융모막 10-12주 --> 양수 16-18주 24주-28주 / Rh자가항체 검사 전처치 28주",
+  },
+  {
+    id:"neu-memory", sys:"신경", name:"기억력저하", page:10,
+    old:{"O": "언제부터, 갑자기, 상황 / 님이 느끼는거? 타인이 느끼는거?", "D": "지속or 호전악화", "Co": "점점", "Ex": "이전에도 --> ㅇㅇ --> 어랏 그럼 그때 진단/치료받아봄?"},
+    c:"[양상] 최근일or 옛날일 +전화번호 [정도] 일단돈가스집길 일단돈까스길 (일상생활, 단어, 돈계산, 가스불현관 언어기능 집행기능 문, 길찾기) +집중력 떨? 장애 장애 일상생활 지장 o --> 치매 / x --> 경도인지장애",
+    a:{ mn:"우파 전두환 혈관 정상갑", exp:"혈관치매(어지럼의식, 두통구토, 시야, 말어눌팔다리)/갑상 샘저하(추위, 변비, 체중증가)/레비소체(환시, 잠꼬대, 파킨 resting tremor / bradykinesia / 보행장애 슨증)/전두측두엽(성격변화)/가성치매(우울, 불안, 수면, 식 욕, 자살사고)/수두증(요실금) (정상압수두증 3대증상 요실금 기억력저하 +보행장애)", items:["혈관치매", "갑상샘", "레비소체", "파킨슨", "전두측두엽", "가성치매", "수두증"] },
+    hx:{"E": "검진 이상", "외": "머리 외상이나 수술(섬망) / 최근 정신적 충격", "과": "HTN/DM/DL +정신과/갑상선", "약": "스테로이드, 신경안정제, 정신과약", "사": "술담배 --> 알코올성 치매(코르사코프 증후군. new기억X) / 스트레스 (잘 먹고 잘 자냐?)", "가": "치매, 파킨슨, 뇌졸중 반드시 “치매” 워딩 사용/신경과질환들~"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 갑상샘, 경동맥청진 , (필요 시 resting tumor 확인)", "Abdomen": "- DTR 할 때 반드시 힘 풀라고 하기!! 소뇌검사: FTNT, Romberg(서봐라, 눈감고서봐라), 걸어가봐라->Tandem gait", "Extermity": "- 뇌신경: 눈(동공반사->까딱까딱 어디움직임?->움직이면서, 2개로보임?)"},
+    ddx:"전두측두엽치매, 레비소체치매, 정상압수두증, 가성치매, 일과성전체기억상실증, 섬망, 약물, 외상, 갑상샘저하증",
+    tests:"신경인지기능검사, CT/MRI, 갑상샘기능검사, 우울척도검사",
+    edu:"뇌자극(운동, 책읽기, 외국어공부), 치매지원센터, 사회복 지사방문치료, 가성치매는 우울증 치료되면 돌아옴, 섬망 교육(시계, 달력, 가족사진 둬서 어디인지 인지)",
+    emerg:"팔다리힘빠짐, 말어눌",
+  },
+  {
+    id:"neu-headache", sys:"신경", name:"두통", page:10,
+    old:{"O": "언제부터, 갑자기, 어떤상황, 하루중언제", "L": "어디(편측/양측), 방사통(목,어깨)", "D": "얼마나지속, 얼마나자주", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 어떤느낌(욱씬, 전기찌릿, 조이듯, 깨질듯, 박동성) [정도] NRS",
+    a:{ mn:"전 길삼편긴군 3뇌", exp:"전신/편두통전조증상(눈앞이반짝, 메스꺼움, 빛소리)/삼차 신경통(이닦거나 밥먹는데 얼굴통증)/긴장성(목어깨, 오후 에아픔)/군발두통(눈물콧물, 특정계절)/크롬(두근거림, 식 은땀)/뇌(어지럼의식, 구토, 시야말어눌, 팔다리, 경련목뻣 뻣)", items:["전신", "편두통전조증상", "삼차신경통", "긴장성", "군발두통", "크롬"] },
+    f:"악화, 완화",
+    hx:{"과": "HTN/DM/DL", "약": "진통제(약물과용두통)", "사": "스트레스", "가": "편두통, 뇌질환", "여": "생리주기 관련성"},
+    pe:{"General": "V/S, 두경부시촉", "HEENT": "눈, 입, 경동맥청진"},
+    ddx:"[이차성] 뇌출혈, 뇌수막염, 경막외출혈, 삼차신경통, 측두 동맥염, 약물과용두통, 크롬친화세포종, 대상포진",
+    tests:"혈액, 뇌CT, 뇌MRI",
+    edu:"원발성-안심, 진통제과용시약물과용두통(처방받은 대로만 복용, 장기적인 예방약제는 1~2 개월 후 효과), 생활습관 (스트레스 조절, 명상, 규칙적인 수면, 술담커)",
+    emerg:"머리가 깨질듯 아픔, 말어눌",
+  },
+  {
+    id:"neu-seizure", sys:"신경", name:"경련", page:10,
+    old:{"O": "언제부터, 갑자기, 어떤상황", "L": "어디서, 넘어지면서 다친곳", "D": "얼마나지속, 얼마나자주", "Co": "점점", "Ex": "이전에도"},
+    c:"[경련전] 불쾌, 치밀어오름, 구역구토, 눈앞깜깜, 팔다리힘빠짐 [경련중] 의식소실/목격자? 눈고개돌아감, 혀깨물, 팔다리 떨거나 경직(양쪽or 한쪽), 대소변, 자동증(입맛다심, 옷만지작) [경련후] 졸리고피곤, 이상한행동(혼돈-측두엽), 마비 [정도] 일상생활",
+    a:{ mn:"전 저나당 간 출신감정 청소", exp:"출생시문제(주산기력)/신경(어지럼의식, 두통구토, 시야, 말어눌팔 다리, 목뻣뻣)/감염(고열, 감기증상)/정신(우울, 불안)/ 청소년근간 대(심한스트레스, 수면부족, 음주)/소아기소발작(과호흡, 빛자극) (소아) 전 출신호영 전신/출생시(주산기력, 발달, 성장)/신경/호흡중지발작(보채다가 발작)/영아연축(잠들때 또는 깰때 발작)", items:["출생시문제", "신경", "감염", "정신", "청소년근간대뇌전증", "소아기소발작", "출생시", "호흡중지발작", "영아연축"] },
+    hx:{"E": "(소아) 선천대사이상, 기형, 예방접종", "과": "뇌전증, 열성경련", "가": "뇌전증, 열성경련"},
+    pe:{"General": "V/S, 두부외상", "HEENT": "눈, 입, 경동맥청진"},
+    ddx:"대뇌전증, 측두엽뇌전증, 외상성뇌전증, 뇌수막염, 뇌졸중 [발작유사질환] 호흡중지발작, 과호흡증후군",
+    tests:"혈액, 뇌파검사, CT/MRI, 뇌척수액",
+    edu:"임신계획 시 상의, 경련예방(금주, 스트레스, 수면), 운전금지(1 년 동안 경련없으면 가능), 열성경련은 합병증이 적고 자연소실, 주 변사람(머리돌려 흡인방지, 목이나 벨트 풀기)",
+    emerg:"5 분이상, 의식회복없이 연달아 발작",
+  },
+  {
+    id:"neu-weakness", sys:"신경", name:"근력/감각이상", page:11,
+    old:{"O": "언제, 갑자기, 어떤상황, Last normal time", "L": "어디(상하지/양측편측/근위원위)", "D": "지속or 호전악화", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 어떻게 이상한지(저림, 찌릿, 아픔), 어떻게 힘빠지는지 [정도] 일상생활",
+    a:{ mn:"전 추신디염 중길 갑수다", exp:"전신/추간판(목허리통증, 뻗치는, 편측성)/신경(어지럼의식, 두통구토, 시 야말어눌, 경련목뻣뻣)/DM(다음, 족부궤양, 변비)/염증성근병증(팔들기, 계단오르기 어렵, 발진)/중증근무력증(눈꺼풀처짐, 복시)/길랑바레(최근감 기, 최근예방접종, 설사)/갑상샘독성주기마비(더위, 설사, 두근, 심한운동/ 과음)/수근관(컴퓨터 오래사용)", items:["전신", "추간판", "신경", "DM", "염증성근병증", "중증근무력증", "길랑바레", "갑상샘독성주기마비", "알코올", "수근관"] },
+    hx:{"과": "HTN/DM/DL", "약": "피묽약", "가": "뇌졸중"},
+    pe:{"General": "V/S", "HEENT": "눈, 경동맥청진, 갑상샘", "Extermity": "[수근관증후군] Tinel, Phalen, 손근력감각 [추간판탈출증] Spurling’s, Lhermitte, SLRT, Patrick"},
+    ddx:"[편측] 뇌경색, 일과성허혈발작, 뇌출혈, 경막하혈종, 뇌종양, 척수염, 다 발경화증, 추간판탈출증 [양측] 길랑바레증후군, 당뇨병신경병증, 갑상샘독성주기마비, 염증성근 병증, 중증근무력증, 비타민B12 결핍 [손] 수근관증후군, 노신경마비",
+    tests:"CT/MRI, 신경전도검사",
+    edu:"격려(빠르게 잘오셨습니다), 철저한관리(혈압관리, 금연금주, 식습관, 운 동), 당뇨조절, 수근관(진통제-주사-수술)",
+    emerg:"말어눌, 두통, 구토",
+  },
+  {
+    id:"neu-consciousness", sys:"신경", name:"의식장애", page:11,
+    old:{"O": "언제, 갑자기, 어떤상황(주변에 술,약봉지), Last normal time", "L": "어디서, 쓰러지면서 다친곳", "D": "지속", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 어떤모습(팔다리떨림, 대소변지림, 출혈)",
+    a:{ mn:"전요 신간수당 알탈~", exp:"전신/탈수/신경(어지럼의식, 두통구토, 시야말어눌, 팔다리, 경련목뻣뻣)/알코올약물 (과음, 금주, 입에서 냄새)/간성혼수(황달, 복수)/수막염(최근감기증상)/당뇨,저혈당(당 뇨병, 입에서 과일냄새, 인슐린중단/감염, 최근식사못함, 식은땀)", items:["전신", "탈수", "신경", "알코올약물", "간성혼수", "수막염", "당뇨저혈당", "감염"] },
+    hx:{"과": "HTN/DM + 간심뇌콩갑", "약": "인슐린, 향정신성/마약"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경동맥청진", "Chest": "심음", "Abdomen": "간, 퍼덕떨림", "Extermity": "피부긴장도, 하지부종"},
+    ddx:"[신경] 뇌경색증, 뇌출혈, 뇌수막염 [내분비] 저혈당혼수, 당뇨병케톤산증, 고삼투압고혈당상태 [전신] 간성혼수, 요독증, 저체온증, 저나트륨혈증, 베르니케증후군 [약물/독소] 알코올중독, 약물중독, 일산화탄소중독",
+    tests:"혈액, 뇌CT, 뇌MRI, 뇌척수액",
+    edu:"위급한 상황이었는데 빨리 잘 오셨습니다. 신속한 검사와 응급처치가 필요하기 때 문에 입원해서 상태를 집중적으로 확인해야 합니다. 보호자 동의받기",
+  },
+  {
+    id:"neu-tremor", sys:"신경", name:"떨림/운동이상", page:11,
+    old:{"O": "언제, 갑자기, 어떤상황", "L": "어디(편측/양측), 다른부위(목/머리/팔다리)", "D": "얼마나지속, 얼마나자주", "Co": "점점", "Ex": "이전에도"},
+    c:"[양상] 규칙vs 불규칙, 춤추듯, 몸이꼬이듯 [상황] RAPI (Resting-가만히있을때, Acting-특정작업, Postural-특정자세, Intentional-물건을 잡으려 할때) [정도] 일상생활",
+    a:{ mn:"전 뇌파생정 본갑당~", exp:"전신/뇌졸중(어지럼의식, 두통구토, 시야말어눌, 팔다리)/파킨슨(종종걸음, 몸굳음)/ 갑상샘항진(더위, 설사)/정신(우울불안, 수면식욕)/Essential(술마시면호 전)/Physiologic(긴장, 심한운동 후)/Low glycemia(공복시 식은땀)", items:["전신", "뇌졸중", "파킨슨", "갑상샘항진", "정신", "Essential", "저혈량"] },
+    hx:{"과": "HTN/DM/DL", "약": "최근에 끊은 약", "가": "본태성떨림"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 갑상샘", "Extermity": "떨림관찰(무릎위에, 앞으로뻗고, 펜잡기, 원그리기), Rigidity"},
+    ddx:"[Resting tremor] 파킨슨병 [Intentional tremor] 소뇌경색/출혈, 다발경화증 [Postural/Acting tremor] 본태떨림, 생리적떨림, 갑상샘항진, 저혈당, 약물 [기타] 근간대경련, 근긴장이상증, 헌팅턴병, 틱/뚜렛증후군",
+    tests:"갑상샘기능, 뇌CT/MRI",
+    edu:"안심(약물치료로 조절 가능), 커피줄이기",
+    emerg:"말어눌, 팔다리힘빠짐",
+  },
+  {
+    id:"psy-mood", sys:"정신", name:"기분변화", page:9,
+    old:{"O": "언제부터, 갑자기, 상황", "D": "얼마나지속(우울삽화2 주, 조증삽화1 주, 경조증삽화4 일), 얼마나자주", "Co": "점점", "Ex": "이전에도, 당시대처"},
+    c:"[양상] 왜, 어떤식으로, 신체적 증상 [병전성격] 평소성격, 가족교우관계 [정도] 일상생활",
+    a:{ mn:"우양조기 하루살이가 자다가 정신차리고 살찌려고 피자사먹자", exp:"우울증(하루종일, 흥미, 잠, 식욕체중, 불안초조, 집중, 피로, 자책감, 자 살사고)/양극성(들뜸, 무엇이든 할수 있을것 같은 기분, 잠을 안자도 피 곤하지않음, 충동적)/조현병(환각환청, 망상-누군가 자신을 해치려함)/기 질적(추위, 변비) 갑상선!!", items:["우울증", "양극성", "조현병"] },
+    f:"계산피스 계절정동, 산후우울증, PTSD(충격적인 일), 스트레스",
+    hx:{"과": "정신과진료, 만성질환", "약": "최근에끊은약", "가": "가족관계, 정신과가족력", "여": "생리주기 관련성, 폐경"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 갑상샘", "Chest": "심음, 호흡음", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[정신] 주요우울장애, 양극성장애 I/II 형, 순환기분장애, 지속성우울장애, 월경전불쾌장애, 산후우울증, 조현병, 조현정동장애, 적응장애, 수면장애 [기질] 갑상샘저하, 약물금단, 뇌졸중",
+    tests:"우울척도검사, 갑상샘기능",
+    edu:"자살위험시 입원권유, 항우울제(2~3 주후에 효과, 최소 6 개월 꾸준히 복용하는게 중요), 중요한 일은 충분히 회복된 후, 스트레스관리(달리기, 수영, 요가), 격려(우울증은 누구나 걸릴수 있고 꾸준히 치료하면 나을 수 있다, 병원에 잘 오셨다)",
+    emerg:"자살사고",
+  },
+  {
+    id:"psy-anxiety", sys:"정신", name:"불안", page:9,
+    old:{"O": "언제, 갑자기, 상황", "D": "얼마나지속, 얼마나자주", "Co": "점점", "Ex": "이전에도, 당시대처"},
+    c:"[양상] 왜, 어떤식으로, 신체적 증상(손떨림, 두근, 과호흡, 쓰러질것 같음) [병전성격] 평소성격, 가족교우관계 [정도] 일상생활",
+    a:{ mn:"광복특사공범강적 수조기피 뇌순호갑호크", exp:"광장공포증(넓은장소나 밀폐된공간)/특정공포증(특정한 대상이 무서워서 피함)/사회불 안장애(사람들 앞에 설때)/공황장애(죽을것같은공포, 숨막히고답답, 예기불안)/범불안장 애(매사에 걱정, 안절부절, 쉽게피곤, 불면)/강박장애(하지 않으려해도 반복되는 생각, 해야할 것만 같은 느낌이 드는행동)/적응장애(스트레스)/PTSD(충격적인일, 회피, 계속 생각남, 악몽)/수면장애(수면시간, 중간에 깸, 악몽)/조현병/순환기(두근거림, 흉통)/호 흡(호흡곤란, 쌕쌕)/갑상샘항진(더위, 체중감소)", items:["광장공포증", "특정공포증", "사회공포증", "공황장애", "범불안장애", "강박장애", "적응장애", "PTSD", "수면장애", "조현병", "순환기", "갑상샘항진"] },
+    hx:{"과": "정신과진료, 만성질환", "약": "최근에끊은약", "가": "가족관계, 정신과가족력", "여": "생리주기 관련성, 폐경"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 갑상샘", "Chest": "심음, 호흡음", "Extermity": "손떨림, 피부긴장도, 오목부종"},
+    ddx:"[정신] 공황장애, 광장공포증, 외상후스트레스장애, 범불안장애, 강박장애, 적응장애, 사회불안장애, 조현병 [기질] 카페인, 갑상샘항진, 부정맥, 크롬, 천식, 뇌전증, 약물금단",
+    tests:"불안척도검사, 갑상샘기능, 심전도",
+    edu:"항우울제/항불안제, 인지행동치료(우울하거나 불안할 때 나도 모르게 상황을 실제보 다 더 부정적으로 보게 되는데 이 잘못된 생각의 습관을 찾아내어 좀 더 객관적이고 건강한 생각으로 바꾸는 연습), 격려(힘든일을 겪고 마음이 원래대로 돌아가는 과정에 서 부조화가 생긴것이다, 누구나 그런 상황에서 스트레스 받을 수 있다), 술담커 끊 기, 스트레스관리",
+    emerg:"자살사고",
+  },
+  {
+    id:"psy-sleep", sys:"정신", name:"수면장애", page:9,
+    old:{"O": "언제부터, 갑자기, 상황", "D": "얼마나지속, 얼마나자주", "Co": "점점", "Ex": "이전에도, 당시대처"},
+    c:"실제 취침시간, 몇시에 눕고 잠들고 깨는지 [수면전] 낮잠, 저녁시간, 잠 잘드는지, 잠안올때 행동, 어둡고 아늑한 환경 [수면중] 중간에 깨는지, 왜(소변), 깨면 뭐하는지, 깨고나면 다시 잠들기 힘든지 [수면후] 일어나서 개운 [정도] 일상생활",
+    a:{ mn:"우기 하렘 전무 오 심천지갑 / (소아) 렘야몽뇌불악", exp:"우울증(우울, 불안, 식욕)/기면증(낮에 갑자기 잠듦, 웃거나 화낼 때 갑자기 힘빠 짐)/수면무호흡(키몸무게, 코골이, 자다가 숨안쉼)/하지불안(잠들기 전 다리 불편 한 느낌, 주무르면 괜찮아짐)/렘수면(잠꼬대, 자다가 과격한 몸부림)/전신/심부전 (누웠을때 숨참)/천식(기침, 쌕쌕)/GERD(신물)/갑상샘항진(더위, 설사)", items:["우울증", "기면증", "수면무호흡", "하지불안", "렘수면", "전신", "심부전", "천식", "GERD", "갑상샘항진"] },
+    hx:{"과": "정신과진료, 만성질환", "약": "최근에끊은약", "사": "직업(생활패턴)", "가": "가족관계, 정신과가족력", "여": "생리주기 관련성, 폐경"},
+    pe:{"General": "V/S", "HEENT": "눈, 입, 갑상샘", "Chest": "심음, 호흡음", "Abdomen": "DRE(BPH)", "Extermity": "피부긴장도, 오목부종"},
+    ddx:"[정신] 불면장애(주3 회 3 개월), 폐쇄수면무호흡, 하지불안증후군, 일주기리듬수 면각성장애, 렘수면행동장애, 기면증, 주요우울장애, 적응장애 [소아] 악몽(다음날기억함), 야경증(다음날기억못함), 몽유병 [기질] 폐경, 갑상샘항진, 물질/약물",
+    tests:"수면다원검사, 우울척도검사, 갑상샘기능검사, 철분수치",
+    edu:"수면위생(일정한시간에 잠들고 일어나기, 낮잠지양, 낮시간은 활동적으로, 커피 녹차 끊기, 자기전 핸드X, 침대는 잘때만, 어둡고 쾌적하게, 억지로 누워있지말 고 독서나 명상), 수면일기, 수면제는 단기간(장기간 사용시 내성금단), 소아안심 (나이들며 저절로 사라짐, 성장이나 발달에 영향없음), 체중감량",
+    emerg:"자살사고",
+  },
+  {
+    id:"cnsl-substance", sys:"정신", name:"약물오남용", page:15,
+    a:{ mn:"행이의 의존남 내시/전소순신정", exp:"", items:[] },
+    pe:{"General": "V/S", "HEENT": "눈(동공반사, 충혈), 입(분비물증가), 경부림프절", "Chest": "심음, 폐음", "Abdomen": "복부시청타촉", "Extermity": "팔 주사자국, 손떨림"},
+    ddx:"약물의존성 높은 상태 (중독표현쓰지말기) (~로 인한 것으로 생각되며, ~사용장애 상태)",
+    tests:"약물의존도 설문, 간기능검사, 신장기능검사 , 심전도, 독성선별검사키트",
+  },
+  {
+    id:"cnsl-suicide", sys:"정신", name:"자살/자해", page:16,
+    a:{ mn:"TOPAI/ 우양조기", exp:"", items:[] },
+    script:["- 제가 알기로는 자살 시도를 해서 내원하신 걸로 알고 있습니다. 지금부터 약 10 분간 ㅇㅇㅇ씨가 겪은", "일에 대해서 면담하려고 합니다. 괜찮으실까요?", "- 이 상담 내용의 모든 것은 법적으로 비밀이 보장되니 걱정하지 않으셔도 됩니다.", "- 저는 진심으로 ㅇㅇㅇ씨가 걱정되기에 전문가적인 입장에서 의학적으로 최대한 도움을 드리고 싶습니다.", "면담 중 힘드시면 언제든 부담없이 말해주세요", "언제/어디서/어떻게, 병원에 어떻게 내원(자의/타의), 진짜 죽으려고 했냐, 지금도 죽고싶냐", "- Trigger : 자살생각을 하게 된 계기", "- Onset: 언제부터 자살생각, 얼마나자주", "- Plan: 자살을 하기 위한 구체적계획, 계획을 주변에 알린 적", "- Attempt: 이전 자살시도, 어떻게", "- Idea: 평소에도 자살계속 생각, 몇번", "- 평소성격, 사건 이후 성격변화", "- 가족관계, 친구관계, 주변에 도움을 줄 만한 분", "- 자살이라는 어려운 생각을 하기까지 많이 힘드셨을 것 같습니다. 병원에 오신건 정말 잘하셨습니다. 이", "렇게 오셨으니 도움이 되어드리도록 하겠습니다", "- 도와드리기에 앞서 ㅇㅇㅇ씨의 상태를 정확히 판단해야 최선의 도움을 드릴 수 있을 듯 합니다. 몇 가지", "질문을 더 드려도 될까요? 힘드시면 말씀하셔도 됩니다.", "신체(아프거나 불편한곳)/정신(우양조성)", "[우울증] 하루종일우울, 흥미, 잠, 식욕, 피곤, 집중력, 기억력, 죄책감, 불안초조", "[양극성장애] 갑자기 기분 확 좋아진적, 충동구매, 잠 안자도 안피곤", "[조현병] 남들에게 안 보이거나 안 들리는 것, 누군가 나를 모함하고 해하려", "[성격장애] 평소 감정조절에 어려움", "[외] 자살시도로 다친거나 수술입원", "[과] 정신과, 진단받은병(말기암, 난치성질환, 만성질환)", "[약] 복용중인약, 최근끊은약", "[사] 술담커식운스", "[가] 정신과, 자살시도력, 가족간문제", "어려운 상황에서 면담에 응해주셔서 감사합니다. 이러한 상황에 처하게 된 것은 절대 ㅇㅇㅇ씨의 잘못이", "아니니 자책하지 않으셨으면 좋겠습니다.", "지금까지 문진을 종합해 보았을 때 ~~로 보아 우울증 소견이 있으신 듯 합니다.", "우울척도검사, 혈액검사", "[입원권유 2 번이상] 자살 위험도가 높아 정신과적 응급이라고 할 수 있습니다. 이런 경우 혼자 지내시면", "더욱 우울해지고 안 좋은 생각이 들게 되어 위험합니다. 따라서 저희가 가까이에서 ㅇㅇㅇ님을 지켜보며", "최선의 도움을 드릴 수 있을 것 같습니다. 입원 치료에 대해 어떻게 생각하시나요?", "입원 치료라는 것에 대해 부담을 가질 수 있습니다만 몇 일 쉬신다 생각하시고 상담치료나 약물 병행하시", "면 우울감이나 안 좋은 생각이 호전될것이라고 봅니다.", "[입원거절시] 낮 동안에만 병원에 와서 증상관리 및 정신재활 프로그램, 외래방문약속, 약 꾸준히 복용", "[가족] 가족에게 상황을 알리고 도움받는 게 어떠세요 -> 알리기 싫어하면 비밀 보장", "[예방] 자살예방상담 1393 보건복지상담센터", "다시 자살생각 나면 응급실 내원"],
+  },
+  {
+    id:"ped-growth", sys:"상담", name:"성장/발달지연", page:13,
+    a:{ mn:"OLDCoEx/키몸머속뼈이/발달/주산기/ E과약사가여", exp:"", items:[] },
+    old:{"주호소": "잘크다가 멈춘것? 예전에 할 수 있던걸 못하는건지 원래 못하는걸 현재, 출생시(50kg, 3.3cm, 성장수첩, 전에는 잘 성장, 연성장률(기준: 손뼈사진 찍어본적 있나요? 차성징] 음모, 유방, 턱수염, 겨드랑이털, 목소리변화 느끼시기에 발달이 느린 것 같은 부분? 고개가누기(3), 배밀이(5), 혼자앉기(7), 손으로쥐기(4), 다른손으로 옮겨쥐기(7), 옹알이(7), 마마빠빠(10), 10 개단어(18), 간단한문장(2 엄마보면웃음(2), 까꿍짝짜궁(10), 옷입힐때 눈맞춤안됨, 또래와 어울리지 못함, 한가지물건 문제] 임신시 나이, 과(HTN/DM, 자궁내성장지연), 문제] 몇주며칠, 출산방식, 출산시문제", "인적사항": "생년월일, 아이와관계, 주양육자 애몇개월?"},
+    hx:{"E": "유전자검사, 청력검사,", "과": "경련, 황달, 중이염 신장뇌(내가) + 갑상선 /", "약": "/ 먹는 약? 스트레스 확인용(+동생/이사)", "사": "유치원/어린이집), 식습관(모유/분유/이유식,", "가": "엄마아빠, 기형, 유전질환 형제 성장 느렸나,", "여": "가족성저신장, 염색체이상, 자궁내성장지연 체질성성장지연, 성장호르몬결핍증, 만성질환"},
+    ddx:"발달지연] 갑상샘저하증, 저산소뇌병증, 터너증후군 청력장애, 자폐스펙트럼장애, 체질지연 뇌성마비, 척수근위축증 유전자검사,",
+    tests:"성장호르몬, 갑상샘, 염색체검사, 언어이해검사, 백분위수미만, 추적관찰(한두번의 검사로 아님, 반복적 검사 필요, 다음에는 직접 관찰하기",
+    edu:"와주세요), 안심(조기진단이 중요하므로 일찍 지나면서 저절로 나아지는 경우도 많다), 생활습관(잘먹고 예방접종",
+    emerg:"b-hcg (10-13주)",
+  },
+  {
+    id:"ped-vacc", sys:"상담", name:"예방접종", page:13,
+    a:{ mn:"뭐?금단/키몸머속뼈이/발달/주산기/ E과약사가여", exp:"", items:[] },
+    script:["검사로 알 수 없고 장기적으로 봐야하므로 오늘 명확히 말씀드리기 어렵다.", "어떤예방접종, 예방접종 수첩", "[모든 백신] 이급 (이전접종 이상반응, 급성질환-열, 경련)", "[DTap] 경신 (조절되지 않는 경련, 중증신경계질환)", "[생백신] SM 항수면면 (스테로이드, 홍역-수두 4 주이내, 항암, 수혈, 면역글", "계속 못하는건지 로불린, 면역결핍질환면)", "부모님키 3퍼센타일 미만이면 병적으로 작은것", "4cm) <4cm면 성장호르몬 결핍", "성장 CC로 왔는데 발달 한문장 정도 묻고자한다면?", "--> 학교 생활은 잘 하고 있냐?", "잘 되다가 안되는 부분? 언어/움직임/사회성 친구들이랑 잘 어울리냐?", "걸음마(11), 뛰기(2 세)", "엄지와검지로(10), 달라고하면줌(12), 블록2 개(15), 낙서(2 세)", "세)", "협조(12), 숟가락질(2 세), 세수(4 세), 혼자입고벗음(5 세) 언어/운동/사회/청력 3개씩,", "집착, 제한되고 반복적인 행동", "약(철분,엽산), 사(술담배) +약 +임신 중 아기 이상", "+만약 제왕절개라면 왜 했는지", "예방접종 +발달에서만", "갑신 (정변) 중 경황 (없어)", "이유식언제시작? 보통 6개월 시작, 1세 고형식이", "골고루, 양), 운동(활발히 잘 돌아다님), 수면(몇시에 자고 일어나는지)", "지금은 괜찮나? / 부모님키몸무게, 나중에 컸나? / 가족 중 선천기형,유전병, 지적장애, 신경학적질환", "- 두 가시 이상의 생백신을 시간간격을 두고 접종할 경우 최소 4 주간격", "갑상샘저하증, 영 - 접종 시기 놓치면 늦게라도 맞으면 됨 (단, 접종간격이 최소 접종 간격 이", "하로 짧아져서는 안됨)", "다운 - 생백신 금기 : 임산부, 면역결핍질환, 고용량 스테로이드(1 달), 최근 면역", "글로불린 투여(가와사키병 11 개월, ITP 8 개월, 홍역수두 8 개월), 최근 수혈", "(pack RBC 5 개월, 혈장혈소판 7 개월)", "- 모든 백신접종 금기 : 이전 접종 후 아나필락시스, 급성질환 갑상선기능검사는 성장발달 공통", "청력검사 -", "정확히 알 수 있는 이상반응(주사부분이 붉어지는 것은 흔한 국소이상반응이며, 대부분 저절로", "위해 아이를 데 사라집니다), 30 분동안 병원에서 관찰후 귀가, 감염예방(긁거나 만지지 않도", "잘 오셨습니다, 시간 록, 간단한 샤워는 가능, 목욕은 피하기), 예방접종수첩(백신종류, 날짜, 병원", "잘자고 잘 명 기입후 서명)", "전신 두드러기, 호흡곤란, 고열, 구토"],
+  },
+  {
+    id:"cnsl-alcohol", sys:"상담", name:"금주", page:15,
+    a:{ mn:"행이의 의존(CAGE)남 내시/ 전 소정기", exp:"", items:[] },
+    pe:{"General": "V/S", "HEENT": "눈, 입, 경부림프절", "Abdomen": "복부시청타촉, 간비장, 복수퍼덕떨림"},
+    ddx:"알코올사용장애: 의존남용에서 2~3 개 중등도, 4 개이상 중증",
+    tests:"알코올사용장애 선별검사, 간기능검사, 복부초음파",
+  },
+  {
+    id:"cnsl-smoking", sys:"상담", name:"금연", page:15,
+    a:{ mn:"행이의 의존(얼첫맛아침몸참)남 내시/ 전호구", exp:"", items:[] },
+    pe:{"General": "V/S", "HEENT": "눈, 입(치아변색), 경부림프절", "Chest": "폐시촉타청"},
+    ddx:"니코틴 의존성: 7 점이상 높은의존, 4~6 점 중등도의존",
+    tests:"가슴엑스선, 폐기능검사",
+  },
+  {
+    id:"cnsl-badnews", sys:"상담", name:"나쁜소식전하기", page:16,
+    a:{ mn:"SPIKES", exp:"", items:[] },
+    script:["- 안녕하세요 ㅇㅇㅇ 씨, 그동안 잘 지내셨나요? 비밀보장", "- 보호자와 같이 오셨나요? 아니면 혼자 오셨나요? 걱정표현", "- 기분/불편한 것/아프던 부위", "- 지금 자리는 편안하신가요", "- 지난 번에 ~~때문에 ~~~ 시행했던 것 기억하시나요", "- 결과가 어떠실 것 같으세요 주호소", "- 결과를 설명드리기 전에 본인의 상태에 대해서 얼마나 알고 계신지 여쭈어봐도 될까요 자살사고", "- 결과를 말씀드리려고 하는데요, 저희가 기대하던 결과와는 조금 다른 결과가 나와서 의논하려고 합니다.", "- 오늘 진단 결과? 아니면 치료 방법까지?", "- 혼자 들으셔도 되고 보호자 분과 같이 들으셔도 됩니다. 어떻게 하시겠습니까", "- 결과가 좋지 않습니다. (침삼키며 뜸들이기) 유감스럽지만 환자분 진단명은 ㅇㅇㅇ입니다.", "(환자가 감정 추스릴 시간 주고, 울면 휴지 건네주기) 병전성격", "- 많이 놀라셨을 것이라 생각됩니다. 조금 마음을 진정할 시간을 드리겠습니다. 주변관계", "부정-분노-타협-우울-수용 요약+공감", "[부정] 저도 환자분 결과가 맞나 재차 확인해 봤습니다. 정확한 진단을 위해 최선을 다했고 검사의 신뢰도가", "높기 때문에 오진은 아닙니다.", "[분노] (일단 들어주기) 열심히 약도 드시고 관리하셨는데 결과가 충격적이라 화나시는 것 이해됩니다. 누구나", "당황하면 그럴 수 있습니다. 진정되면 앞으로 저희가 할 수 있는 것들에 대해 이야기해 봅시다. 동반증상", "- 질병 자체에 대한 설명 / 검사결과지 보면서 설명. 이해되셨나요? 필요하다면 다시 설명해드리겠습니다.", "- 많이 걱정되시겠지만, 다음 치료 계획에 대해서 함께 충분히 이야기하는 것도 중요하다고 생각합니다.", "치료계획 들을 준비가 되셨나요", "[사회지원사업] 치료비 경제적 지원", "[말기암] 증상을 완화시켜 남은 삶의 질을 향상시키데 치료 목적이 있음. 호스피스 프로그램을 통해 통증완화 외과약사가여", "및 정서적지지를 받을 수 있음.", "[중심망막동맥폐쇄] 복지관에서 점자교육이나 시각재활치료, 맹인 안내견제도, 자원봉사자 연결", "[HIV] HIV 양성≠에이즈(바이러스에 의해 면역저하가 오고 다른 감염들이 합병이 되면 에이즈라고 하고, 이를", "예방하기 위해 약물치료가 필요), 예후(바이러스가 완전히 사라지게는 못하고, 기능을 못하게만 하기 때문에", "오랫동안 약을 먹어야 한다. 고혈압당뇨처럼 만성적으로 관리해야 하는 질병. 약 꾸준히 복용하면 일상생활", "요약+공감 가능), 치료비(치료약제는 국가에서 100% 보험이 되므로, 금전적인 문제는 걱정하지 마라), 감염병예방(에이즈는", "인체 면역기능이 저하되면서 일반인이 잘 걸리지 않는 감염병이나 질환들이 생기는 것이 문제. 예방하는 것이", "진단 중요하고, 앞으로 생활 속에서도 조심해야), 성접촉자에게 알리기(HIV 는 전염성이 강하고 혈액, 체액을 통해", "전파되기 때문에 성접촉자에게 알려야 한다. 혹시 최근에 성관계 했는지, 누구랑 했는지? 직접 말씀 전하기 검사", "어려우시다면 제가 대신 설명해드릴 수 있습니다), 추적관찰(면역기능 확인을 위해 방문시마다 혈액검사), 치료", "취직이나 구직활동에 영향을 주지 않음", "[가족들에게 알리기] 가족들에게 말씀드리기 곤란하시면 제가 도와드리겠습니다. 가족이 큰 힘이 되어줄 수", "있기 때문에 가능한 빨리 알리고 함게 이겨나가는 것을 권한다", "[지지] 치료과정이 쉽지는 않겠지만 포기하지 말고 힘내셨으면 합니다. 저를 포함해서 의료진들이 끝까지", "함께하며 최선을 다해 도와드리겠습니다.", "[다음 약속잡기] 정기적 방문일이 아니더라도, 마음이 너무 힘드시면 언제든지 병원에 내원하셔서 상담하셔도", "됩니다. 제가 필요하면 언제든지 도움이 되어 드릴 수 있고, 최선을 다하겠습니다.", "응급"],
+  },
+  {
+    id:"cnsl-dv", sys:"상담", name:"가정폭력", page:17,
+    a:{ mn:"(전체 구성)", exp:"", items:[] },
+    old:{"O": "누가, 언제, 어떤상황", "L": "어디서", "D": "얼마나 자주", "Co": "점점", "Ex": "이전에도"},
+    c:"[방법] 신체적(때림, 도구사용), 정서적(욕설), 성적, 경제적(돈을안줌), 방임(밥안줌, 병원안데려감) [가해자] 폭행후태도, 평소성격/주변관계, 직업, 술약물, 정신과병력 [피해자] 어떤대처? 저항, 신고, 도움요청, 피해있을장소",
+    pe:{"General": "V/S, 전반적영양, 위생상태"},
+    ddx:"이 상황은 가정폭력/성폭력이 맞습니다. ㅇㅇㅇ씨는 이 문제에 대해 어떻게 하실 생각이신가요?",
+  },
+  {
+    id:"cnsl-sa", sys:"상담", name:"성폭력", page:17,
+    a:{ mn:"(전체 구성)", exp:"", items:[] },
+    old:{"O": "누가, 언제, 어떤상황, 목격자", "L": "어디서", "Ex": "이전에도"},
+    c:"[방법] 어둠사물(어디에-질내/구강/항문, 콘돔사용, 사정했는지, 물건사용), 의무신고(의식잃음, 무기나 도구, 신체적 폭행) [가해자] 폭행후태도, 평소성격/주변관계, 직업, 술약물, 정신과병력 [피해자] 어떤대처? 저항, 신고, 도움요청, 피해있을장소 / 이닦기, 샤워목욕, 옷갈아입기, 대소변, 사후피임약",
+    pe:{"General": "V/S, 전반적영양, 위생상태", "HEENT": "눈, 입", "Extermity": "사지(외상부위)"},
+  },
 ];
 
 if (typeof module !== "undefined") { module.exports = { CARDS, ASK }; }
 
 </script>
 <script>
-const LS_PROG="cpx_progress", LS_SET="cpx_settings";
-let prog = JSON.parse(localStorage.getItem(LS_PROG)||"{}");
-let set = Object.assign({cover:true,two:true,shuf:false,filter:"all",sys:"all",search:"",id:null},
-                        JSON.parse(localStorage.getItem(LS_SET)||"{}"));
+const LS_PROG="cpx_progress", LS_SET="cpx_settings", LS_FB="cpx_feedback", LS_FBQ="cpx_fb_queue",
+      LS_MN="cpx_mn",
+      /* 신규 저장소 — 기존 키의 형식은 건드리지 않고 옆에 새 키를 둔다 */
+      LS_DDX="cpx_ddx",      // {카드ID:{text,ts}}      감별진단 덮어쓰기
+      LS_TAG="cpx_tag",      // {카드ID:{v,ts}}         v = hard|mid|easy
+      LS_HL ="cpx_hl",       // {카드ID:{mn:[{t,c}],ddx:[{t,c}],ts}}  c = y|p
+      LS_PTS="cpx_progress_ts",  // {카드ID:ts} 진도용 타임스탬프. cpx_progress 는 형식 그대로 두고
+                                 //            ts 넣을 자리가 없어 별도 키로 뺐다
+      LS_SKEW="cpx_skew",        // 서버시계 - 기기시계 (ms). 모든 ts 는 이걸 더해 찍는다
+      LS_PEND="cpx_pending",     // push 는 했는데 서버 반영이 아직 확인 안 된 것
+      LS_DIRTY="cpx_dirty",      // 로컬에만 저장되고 아직 push 조차 안 한 것
+      LS_OK="cpx_lastok";        // 마지막으로 시트 반영이 확인된 시각
+const lsObj=k=>{ try{ return JSON.parse(localStorage.getItem(k)||"{}")||{}; }catch(e){ return {}; } };
+/* prog/set 은 앱의 뼈대다. 여기서 예외가 나면 모듈 최상위가 죽어 게이트도 안 걷히고
+   화면이 백지가 된다(그 상태에서 "사이트 데이터 삭제"를 하면 진도가 통째로 날아간다).
+   → 절대 던지지 않는다. 깨진 값은 버리지 말고 별도 키에 원문을 남겨 복구 여지를 둔다. */
+function lsObjSafe(k){
+  let raw=null;
+  try{ raw=localStorage.getItem(k); }catch(e){ return {}; }
+  if(raw===null||raw==="") return {};
+  try{ const o=JSON.parse(raw);
+       if(o && typeof o==="object" && !Array.isArray(o)) return o; }catch(e){}
+  try{ localStorage.setItem(k+"_corrupt_"+Date.now(), raw); }catch(e){}
+  return {};
+}
+
+/* ── 시각 기준: 오직 서버 시계 ──────────────────────────────
+   기기 시계(Date.now())는 틀어질 수 있다. 로컬 ts 와 서버 _ts 를 직접 비교하는 곳이
+   많으므로, 저장하는 모든 ts 는 srvNow() = 기기시계 + skew 로 찍는다.
+   skew 는 sheetLoad() 응답의 now 로 매번 갱신된다. 아직 모르면 0(=종전과 동일). */
+let _skew=0;
+try{ const v=Number(localStorage.getItem(LS_SKEW)); if(isFinite(v)) _skew=v; }catch(e){}
+function srvNow(){ return Date.now()+_skew; }
+function setSkew(serverNow){
+  const n=Number(serverNow);
+  if(!isFinite(n) || n<=0) return;
+  _skew=n-Date.now();
+  try{ localStorage.setItem(LS_SKEW,String(Math.round(_skew))); }catch(e){}
+}
+
+let prog = lsObjSafe(LS_PROG);
+const SET_DEFAULTS={cover:true,two:true,shuf:false,filter:"all",sys:"all",search:"",id:null,
+                    view:"card", cols:3, libName:true, libMn:true, libDdx:false, libFb:false,
+                    pTitle:true, pMn:true, pDdx:false, pFb:false, pFull:false,
+                    pTarget:"all", pSys:"all", pCols:2, libTab:"all"};
+let set = Object.assign({}, SET_DEFAULTS, lsObjSafe(LS_SET));
+let fb = {};
+try{ fb = JSON.parse(localStorage.getItem(LS_FB)||"{}") || {}; }catch(e){ fb={}; }
+/* 말야마 덮어쓰기: {카드ID:{text,ts}}. 없으면 데이터의 a.mn 을 쓴다 — 원본은 절대 안 지워진다 */
+let mnOv = {};
+try{ mnOv = JSON.parse(localStorage.getItem(LS_MN)||"{}") || {}; }catch(e){ mnOv={}; }
+let ddxOv = lsObj(LS_DDX);   // 감별진단 덮어쓰기 (말야마와 완전히 대칭)
+let tagOv = lsObj(LS_TAG);   // 컬러태그
+let hlOv  = lsObj(LS_HL);    // 형광펜
+let progTs= lsObj(LS_PTS);   // 진도 타임스탬프
 let deck=[], pos=0, flipped=false, rv=null;
+let _lastView=null, libRand=null;   // libRand: 랜덤 탭의 현재 셔플 순서(카드ID 배열). null = 다시 섞어라
+
+const ID_MIGRATE={"msk-back":"msk-neck","obgyn-breastmass":"obgyn-breastpain"};
+(function(){let ch=false;
+  for(const [o,n] of Object.entries(ID_MIGRATE)){
+    if(prog[o]!==undefined){ if(prog[n]===undefined) prog[n]=prog[o]; delete prog[o]; ch=true; }
+  }
+  if(ch) localStorage.setItem(LS_PROG,JSON.stringify(prog));
+})();
+
 
 const $=id=>document.getElementById(id);
 const save=()=>{localStorage.setItem(LS_PROG,JSON.stringify(prog)); localStorage.setItem(LS_SET,JSON.stringify(set));};
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+/* 말야마 읽기는 전부 여기를 지난다 — 카드뷰 ③A · 라이브러리 · 프린트 · 검색 */
+const mnBase=c=>String((c&&c.a&&c.a.mn)||"").trim();          // 데이터 원본
+const mnEdited=c=>!!(c && mnOv[c.id] && mnOv[c.id].text);      // override 걸렸나
+const mnOf=c=>{ const o=c&&mnOv[c.id];
+  return (o&&o.text) ? String(o.text).trim() : mnBase(c); };
+
+/* 감별진단 읽기도 전부 여기를 지난다 — 카드뷰 ⑦ · 라이브러리 · 프린트 · 검색.
+   말야마(mnBase/mnOf/mnEdited/mnDisp)와 완전히 대칭이다. */
+const ddxBase=c=>String(Array.isArray(c&&c.ddx)?c.ddx.join(", "):((c&&c.ddx)||"")).trim();
+const ddxEdited=c=>!!(c && ddxOv[c.id] && ddxOv[c.id].text);
+const ddxOf=c=>{ const o=c&&ddxOv[c.id];
+  return (o&&o.text) ? String(o.text).trim() : ddxBase(c); };
+
+/* ── 형광펜 ────────────────────────────────────────────────
+   저장은 글자 인덱스가 아니라 "칠한 문자열 자체"다. 말야마를 고쳐도
+   엉뚱한 글자에 칠해지지 않고, 그 문자열이 사라지면 그냥 안 칠해진다(조용히 무시). */
+const hlOf=(c,f)=>{ const r=c&&hlOv[c.id]; const a=r&&r[f]; return Array.isArray(a)?a:[]; };
+const hlHas=(c,f)=>hlOf(c,f).length>0;
+/* 원문(plain) → escape + <mark> 삽입. 사용자 입력이든 원본이든 전부 escape 한다
+   (원본 감별진단에 "[급성<2 주]" 같은 리터럴 '<' 가 있어 raw 삽입은 위험하다). */
+function hlHtml(text,spans){
+  const t=String(text==null?"":text);
+  if(!t) return "";
+  if(!spans||!spans.length) return esc(t);
+  const hits=[];
+  spans.forEach(sp=>{
+    const s=String((sp&&sp.t)||""); if(!s) return;
+    const cl=(sp.c==="p")?"p":"y";
+    let from=0,i;
+    while((i=t.indexOf(s,from))>=0){ hits.push({a:i,b:i+s.length,c:cl}); from=i+s.length; }
+  });
+  if(!hits.length) return esc(t);
+  hits.sort((x,y)=>x.a-y.a||y.b-x.b);
+  const keep=[]; let end=-1;
+  for(const m of hits){ if(m.a>=end){ keep.push(m); end=m.b; } }   // 겹치면 먼저·긴 쪽이 이긴다
+  let h="",p=0;
+  for(const m of keep){
+    h+=esc(t.slice(p,m.a))+`<mark class="hl${m.c}">`+esc(t.slice(m.a,m.b))+`</mark>`;
+    p=m.b;
+  }
+  return h+esc(t.slice(p));
+}
+/* 표시용 최종 HTML — 카드뷰·라이브러리·프린트가 전부 이걸 쓴다 */
+const mnDisp =c=>hlHtml(mnOf(c), hlOf(c,"mn"));
+const ddxDisp=c=>hlHtml(ddxOf(c),hlOf(c,"ddx"));
+
+/* ── 컬러태그 ── */
+const TAGS=[{v:"hard",e:"🔴",n:"어려움"},{v:"mid",e:"🟡",n:"애매"},
+            {v:"easy",e:"🟢",n:"쉬움"},{v:"",e:"⚪",n:"미지정"}];
+const tagOf=c=>{ const r=c&&tagOv[c.id]; const v=r&&r.v;
+  return (v==="hard"||v==="mid"||v==="easy")?v:""; };
+const tagEmoji=v=>({hard:"🔴",mid:"🟡",easy:"🟢"}[v]||"");
+
+/* ── 피드백 메모 저장소 (localStorage 1차) ── */
+const fbSaveLS=()=>{ try{ localStorage.setItem(LS_FB,JSON.stringify(fb)); }catch(e){} };
+const fbText=id=>(fb[id]&&fb[id].text)||"";
+
+/* ── 묘비(tombstone) 규칙 ────────────────────────────────────
+   "지움"을 레코드 삭제로 표현하면 로컬 ts 가 0 이 되어, 시트에 남아 있는 옛 값(ts>0)이
+   항상 이긴다 = 지운 게 되살아난다.
+   그래서 지울 때 레코드를 없애지 않고 **빈 값 + 지운 시각**을 남긴다.
+   읽기 함수들은 빈 값을 "없음"으로 취급하므로 화면 표시는 종전과 똑같다. */
+
+/* ── 말야마 덮어쓰기 저장소 (피드백과 같은 패턴) ── */
+const mnSaveLS=()=>{ try{ localStorage.setItem(LS_MN,JSON.stringify(mnOv)); }catch(e){} };
+/* 비었거나 원본과 같으면 빈 override(묘비) = 원본 복귀 */
+function mnSet(card,text,ts){
+  const t=String(text||"").trim();
+  mnOv[card.id]=(!t || t===mnBase(card)) ? {text:"",ts:ts} : {text:t,ts:ts};
+  mnSaveLS();
+}
+
+/* ── 감별진단 덮어쓰기 저장소 (말야마와 완전히 같은 규칙) ── */
+const ddxSaveLS=()=>{ try{ localStorage.setItem(LS_DDX,JSON.stringify(ddxOv)); }catch(e){} };
+function ddxSet(card,text,ts){
+  const t=String(text||"").trim();
+  ddxOv[card.id]=(!t || t===ddxBase(card)) ? {text:"",ts:ts} : {text:t,ts:ts};
+  ddxSaveLS();
+}
+
+/* ── 컬러태그 저장소 ── */
+const tagSaveLS=()=>{ try{ localStorage.setItem(LS_TAG,JSON.stringify(tagOv)); }catch(e){} };
+function tagSet(card,v,ts){
+  const ok=(v==="hard"||v==="mid"||v==="easy");
+  tagOv[card.id]={v: ok?v:"", ts:ts};               // 미지정도 레코드로 남긴다(묘비)
+  tagSaveLS();
+}
+
+/* ── 형광펜 저장소 ── */
+const hlSaveLS=()=>{ try{ localStorage.setItem(LS_HL,JSON.stringify(hlOv)); }catch(e){} };
+function hlRec(id){ const r=hlOv[id]; return (r&&typeof r==="object")?r:{}; }
+function hlSetField(card,f,arr,ts){
+  const r=Object.assign({},hlRec(card.id));
+  if(arr&&arr.length) r[f]=arr; else delete r[f];
+  r.ts=ts;
+  if(!(r.mn&&r.mn.length)&&!(r.ddx&&r.ddx.length)) hlOv[card.id]={ts:ts};  // 전부 지움 = 묘비
+  else hlOv[card.id]=r;
+  hlSaveLS();
+}
+/* 선택한 문자열에 색을 칠하거나(같은 색이 이미 있으면) 벗긴다.
+   act: "y" | "p" | "x"(지우기). 반환값은 실제로 뭔가 바뀌었는지. */
+function hlToggle(card,f,sel,act){
+  const s=String(sel||"").trim();
+  if(!s) return false;
+  const src=(f==="mn")?mnOf(card):ddxOf(card);
+  if(src.indexOf(s)<0) return false;                // 원문에 없는 선택은 무시
+  let arr=hlOf(card,f).slice();
+  const same=arr.findIndex(x=>x&&x.t===s);
+  let changed=false;
+  if(act==="x"){
+    // 선택 영역과 겹치는 칠을 전부 벗긴다(포함·피포함 둘 다)
+    const n=arr.filter(x=>!(x&&(x.t===s||s.indexOf(x.t)>=0||x.t.indexOf(s)>=0)));
+    changed=n.length!==arr.length; arr=n;
+  }else if(same>=0 && arr[same].c===act){
+    arr.splice(same,1); changed=true;               // 같은 색 재선택 = 해제
+  }else if(same>=0){
+    arr[same]={t:s,c:act}; changed=true;            // 색만 바꿈
+  }else{
+    arr.push({t:s,c:act}); changed=true;
+  }
+  if(changed) hlSetField(card,f,arr,srvNow());
+  return changed;
+}
+
+/* ── 구글시트 백업 (config.json의 "sheet"가 비면 조용히 비활성) ── */
+let SHEET="";
+function sess(){ try{ return JSON.parse(localStorage.getItem("cpx_session")||"null")||{}; }catch(e){ return {}; } }
+
+/* ── 전송 상태 두 가지 ───────────────────────────────────────
+   dirty   : 로컬에는 저장됐는데 아직 push 조차 안 했다 (저장 버튼을 안 누른 편집 등)
+   pending : push 는 했는데 서버에 들어갔는지 확인이 안 됐다
+   mode:'no-cors' 라 응답을 못 읽는다 → "보냈다"는 성공의 증거가 아니다.
+   다음 sheetLoad() 에서 서버가 그 값을 갖고 있는 걸 보고 나서야 pending 을 지운다. */
+const PFIELDS=["text","mn","ddx","tag","hl","prog"];
+const PEND_WARN=5*60*1000;                  // 이만큼 확인이 안 되면 헤더에 경고
+let pend=lsObj(LS_PEND), dirty=lsObj(LS_DIRTY);
+const pendSave =()=>{ try{ localStorage.setItem(LS_PEND ,JSON.stringify(pend )); }catch(e){} };
+const dirtySave=()=>{ try{ localStorage.setItem(LS_DIRTY,JSON.stringify(dirty)); }catch(e){} };
+/* 형광펜은 문자열로도 객체로도 오간다 — 비교용 정규화 */
+function hlKey(v){
+  let o=v;
+  if(typeof o==="string"){ const t=o.trim();
+    if(!t) o=null; else { try{ o=JSON.parse(t); }catch(e){ o=null; } } }
+  const m=(o&&Array.isArray(o.mn))?o.mn:[], d=(o&&Array.isArray(o.ddx))?o.ddx:[];
+  return JSON.stringify({mn:m,ddx:d});
+}
+function dirtyMark(id,f){ if(!SHEET||!id) return; dirty[id+"|"+f]=1; dirtySave(); pendPaint(); }
+function dirtyClear(id,f){ const k=id+"|"+f;
+  if(dirty[k]===undefined) return; delete dirty[k]; dirtySave(); }
+/* push 한 필드를 pending 으로 올린다. 같은 필드가 dirty 였다면 내린다. */
+function pendMark(p){
+  if(!SHEET||!p||!p.cardId) return;
+  let ch=false;
+  PFIELDS.forEach(f=>{
+    if(p[f]===undefined) return;
+    const v=(f==="hl")?hlKey(p[f]):String(p[f]==null?"":p[f]);
+    pend[p.cardId+"|"+f]={v:v, t:+p.ts||srvNow(), s:Date.now()};
+    dirtyClear(p.cardId,f);
+    ch=true;
+  });
+  if(ch){ pendSave(); pendPaint(); }
+}
+/* 서버가 우리 값을 갖고 있거나, 우리 것보다 더 최신 값을 갖고 있으면 확인된 것으로 본다
+   (후자는 다른 기기가 그 뒤에 덮어쓴 경우다 — 어느 쪽이든 "백업 안 됨"은 아니다) */
+function pendClear(id,f,srvVal,srvTs){
+  const k=id+"|"+f, e=pend[k];
+  if(!e) return false;
+  const sv=(f==="hl")?hlKey(srvVal):String(srvVal==null?"":srvVal);
+  if(sv===String(e.v==null?"":e.v) || (+srvTs||0)>=(+e.t||0)){ delete pend[k]; return true; }
+  return false;
+}
+
+function queueAdd(p){
+  try{ const q=JSON.parse(localStorage.getItem(LS_FBQ)||"[]");
+       q.push(p); localStorage.setItem(LS_FBQ,JSON.stringify(q.slice(-300))); }catch(e){}
+}
+/* 모든 push 는 여기를 지난다. ts 는 여기서 반드시 채워진다 —
+   큐에 들어갈 때 이미 찍혀 있어야 며칠 뒤 재전송돼도 원래 시각이 유지된다. */
+function sheetPush(p,requeue){
+  if(!SHEET) return Promise.resolve(false);          // 미설정 → 아무것도 안 함
+  if(p && p.cardId && p.ts===undefined) p.ts=srvNow();
+  if(p && Array.isArray(p.bulk)) p.bulk.forEach(pendMark); else pendMark(p);
+  try{
+    return fetch(SHEET,{method:"POST",mode:"no-cors",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},   // preflight 회피
+      body:JSON.stringify(p)})
+      .then(()=>true)
+      .catch(()=>{ if(requeue!==false) queueAdd(p); return false; });
+  }catch(e){ if(requeue!==false) queueAdd(p); return Promise.resolve(false); }
+}
+function queueFlush(){
+  if(!SHEET) return;
+  let q=[]; try{ q=JSON.parse(localStorage.getItem(LS_FBQ)||"[]"); }catch(e){ q=[]; }
+  if(!q.length) return;
+  localStorage.setItem(LS_FBQ,"[]");
+  q.forEach(p=>sheetPush(p));
+}
+
+/* ── 일괄 전송 ───────────────────────────────────────────────
+   (카드,필드) 한 건짜리 payload 를 만든다. 필드마다 제 ts 를 달고 나가므로
+   한 카드의 여러 필드를 같이 보내도 서로의 시각을 오염시키지 않는다.
+   로컬에 레코드 자체가 없으면(=한 번도 손댄 적 없음) null — 보내지 않는다. */
+function fieldPayload(card,f){
+  const id=card.id, base={cardId:id, cardName:card.name||""};
+  const r=({text:fb,mn:mnOv,ddx:ddxOv,tag:tagOv,hl:hlOv})[f];
+  const rec=r?r[id]:null;
+  if(f==="prog"){
+    const t=+progTs[id]||0;
+    if(!t && prog[id]===undefined) return null;
+    return Object.assign(base,{prog:prog[id]||"", ts:t||srvNow()});
+  }
+  if(!rec || typeof rec!=="object") return null;
+  const ts=+rec.ts||0;
+  if(f==="text") return Object.assign(base,{text:String(rec.text||""), ts:ts});
+  if(f==="mn")   return Object.assign(base,{mn:  String(rec.text||""), ts:ts});
+  if(f==="ddx")  return Object.assign(base,{ddx: String(rec.text||""), ts:ts});
+  if(f==="tag")  return Object.assign(base,{tag: String(rec.v||""),    ts:ts});
+  if(f==="hl"){
+    const mn=Array.isArray(rec.mn)?rec.mn:[], dd=Array.isArray(rec.ddx)?rec.ddx:[];
+    const empty=!mn.length&&!dd.length;
+    return Object.assign(base,{hl: empty?"":JSON.stringify({mn:mn,ddx:dd}), ts:ts});
+  }
+  return null;
+}
+const BULK_CHUNK=100;
+/* beacon=true 면 언로드 중에도 살아남는 sendBeacon 으로 보낸다(fetch 는 취소된다) */
+function sendBulk(items,beacon){
+  if(!SHEET || !items || !items.length) return Promise.resolve(false);   // 빈 요청 금지
+  const s=sess(), chunks=[];
+  for(let i=0;i<items.length;i+=BULK_CHUNK) chunks.push(items.slice(i,i+BULK_CHUNK));
+  if(beacon && navigator.sendBeacon){
+    let ok=true;
+    chunks.forEach(c=>{
+      const body=new Blob([JSON.stringify({name:s.name||"",code:s.code||"",bulk:c})],
+                          {type:"text/plain;charset=utf-8"});
+      let r=false; try{ r=navigator.sendBeacon(SHEET,body); }catch(e){ r=false; }
+      if(!r) ok=false;
+      c.forEach(pendMark);                     // 언로드 중이라도 상태는 남긴다
+    });
+    return Promise.resolve(ok);
+  }
+  return Promise.all(chunks.map(c=>sheetPush({name:s.name||"",code:s.code||"",bulk:c})))
+               .then(rs=>rs.every(Boolean));
+}
+function cardById(){ const m={}; CARDS.forEach(c=>m[c.id]=c); return m; }
+function keysToItems(keys){
+  const by=cardById(), items=[];
+  keys.forEach(k=>{
+    const i=k.lastIndexOf("|"); if(i<0) return;
+    const c=by[k.slice(0,i)], f=k.slice(i+1);
+    if(!c || PFIELDS.indexOf(f)<0) return;
+    const p=fieldPayload(c,f); if(p) items.push(p);
+  });
+  return items;
+}
+/* 아직 push 안 한 것들을 전부 밀어낸다. 2분 주기·탭 이탈·탭 복귀·페이지 종료에서 부른다.
+   dirty 가 없으면 요청을 아예 안 보낸다(그게 곧 스로틀이다).
+   입력 중이어도 상관없다 — 내 것을 올리는 방향이라 입력을 방해하지 않는다. */
+function flushDirty(beacon){
+  if(!SHEET) return Promise.resolve(false);
+  const keys=Object.keys(dirty);
+  if(!keys.length) return Promise.resolve(false);
+  const items=keysToItems(keys);
+  dirty={}; dirtySave();
+  if(!items.length){ pendPaint(); return Promise.resolve(false); }
+  return sendBulk(items,beacon);
+}
+/* 확인 안 된 pending 을 로컬 현재값으로 다시 보낸다(헤더 경고 클릭) */
+function retryPending(){
+  const items=keysToItems(Object.keys(pend));
+  if(items.length) sendBulk(items,false);
+}
+/* 전체 저장 — 로컬에 있는 모든 카드 데이터를 필드 단위로 모아 bulk 한 방으로 올린다.
+   공부를 마칠 때 누르는 마무리 버튼이라 성공/실패가 분명해야 한다.
+   실패하면 dirty 를 되살려 둔다(다음 자동 밀어내기 때 다시 나가도록). */
+function bulkBackup(){
+  if(!SHEET) return Promise.resolve({cards:0,items:0,ok:false});
+  fbFlush(); mnFlush(); ddxFlush();               // 입력 중이던 것부터 확정
+  const items=[], seen={};
+  CARDS.forEach(c=>PFIELDS.forEach(f=>{
+    const p=fieldPayload(c,f);
+    if(p){ items.push(p); seen[c.id]=1; }
+  }));
+  const cards=Object.keys(seen).length;
+  if(!items.length) return Promise.resolve({cards:0,items:0,ok:true});
+  return sendBulk(items,false).then(ok=>{
+    if(!ok){ items.forEach(p=>{ PFIELDS.forEach(f=>{ if(p[f]!==undefined) dirty[p.cardId+"|"+f]=1; }); });
+             dirtySave(); pendPaint(); }
+    return {cards:cards, items:items.length, ok:ok};
+  });
+}
+/* 헤더 "전체 저장" 버튼 — 어느 뷰에서든 누를 수 있다 */
+function bindBulkBtn(){
+  const b=document.getElementById("bkSave");
+  if(!b) return;
+  if(!SHEET){ b.style.display="none"; return; }   // 시트 미설정이면 아예 안 보인다
+  b.style.display="";
+  let busy=false;
+  b.onclick=()=>{
+    if(busy) return;
+    busy=true; b.classList.add("on"); b.textContent="저장 중…";
+    const done=(t,keepOn)=>{
+      b.textContent=t; b.classList.toggle("on",!!keepOn); busy=false;
+      setTimeout(()=>{ if(!busy) b.textContent="전체 저장"; },4000);
+    };
+    bulkBackup().then(r=>{
+      if(!r.items) return done("저장할 내용 없음");
+      if(!r.ok)    return done("저장 실패 — 다시 시도");
+      done(r.cards+"장 전체 저장 완료");
+      setTimeout(()=>sheetLoad(true),1500);       // 반영 확인은 헤더 표시가 이어받는다
+    }).catch(()=>done("저장 실패 — 다시 시도"));
+  };
+}
+
+/* 저장 버튼 옆 문구. 보낸 것과 서버에 들어간 것은 다르다 — 확인 전에는 "전송"이라 쓰지 않는다.
+   실제 반영 확인은 헤더의 백업 상태(bkStat)가 책임진다. */
+const sheetNote=()=>SHEET?" · 시트 전송 대기":"";
+
+/* ── 백업 상태 표시 (헤더) ── */
+function pendPaint(){
+  const el=document.getElementById("bkStat"); if(!el) return;
+  if(!SHEET){ el.className="bkstat"; el.textContent=""; el.title=""; return; }
+  const now=Date.now();
+  const late=Object.keys(pend).filter(k=>now-(+pend[k].s||0)>PEND_WARN).length;
+  if(late){
+    el.className="bkstat bad";
+    el.textContent="⚠ 시트 백업 안 됨 ("+late+"건)";
+    el.title="눌러서 다시 시도합니다";
+    return;
+  }
+  const wait=Object.keys(pend).length+Object.keys(dirty).length;
+  const t=+localStorage.getItem(LS_OK)||0;
+  el.className="bkstat";
+  el.title="마지막으로 시트 반영이 확인된 시각";
+  el.textContent=(t?("백업 확인 "+new Date(t).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"}))
+                   :"백업 확인 전")+(wait?(" · 대기 "+wait):"");
+}
+/* ── 시트 자동 갱신 ──
+   다른 기기(아이패드↔노트북)의 변경을 가져오기 위해 (a) 탭 복귀 (b) 2분 주기로 다시 읽는다.
+   SHEET 가 비면(오프라인판) 타이머도 리스너도 아예 안 건다 = 네트워크 요청 0건. */
+const SHEET_MIN=10000, SHEET_EVERY=120000;
+let _sheetLast=0, _sheetTimer=null, _needRender=false;
+/* 지금 편집 중인 칸 — 갱신이 이 칸을 덮어쓰거나 화면을 다시 그리면 입력이 날아간다 */
+function editingNow(){
+  const ae=document.activeElement;
+  const f=ae&&ae.id&&{fbText:"text",mnText:"mn",ddxText:"ddx"}[ae.id];
+  if(!f) return null;
+  const c=deck[pos];
+  return c?{id:c.id,field:f}:null;
+}
+/* 편집이 끝나면 미뤄둔 다시그리기를 실행한다 */
+document.addEventListener("focusout",()=>{
+  if(!_needRender) return;
+  setTimeout(()=>{ if(_needRender && !editingNow()){ _needRender=false; renderKeep(); } },250);
+});
+/* 아직 안 보낸 편집을 확정하고 밀어낸다. 언로드 직전이면 sendBeacon 으로. */
+function pushOut(beacon){
+  fbFlush(); mnFlush(); ddxFlush();      // 디바운스 대기중이던 입력부터 로컬 확정
+  return flushDirty(beacon);
+}
+function sheetAutoInit(){
+  if(!SHEET || _sheetTimer) return;                       // 미설정이면 아무것도 안 건다
+  document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState==="hidden"){ pushOut(true); return; }  // 떠날 때: 비콘으로 밀어냄
+    pushOut();                                             // 돌아올 때: 내 것 먼저 올리고
+    sheetLoad();                                           // 남의 것을 받는다(10초 스로틀)
+  });
+  /* 페이지 종료 — beforeunload 는 모바일 사파리에서 안 온다. pagehide 가 맞다.
+     fetch 는 언로드 중 취소되므로 sendBeacon 으로 보낸다. */
+  window.addEventListener("pagehide",()=>{ pushOut(true); });
+  _sheetTimer=setInterval(()=>{
+    if(document.visibilityState==="hidden") return;        // 숨겨져 있으면 건너뛴다
+    pushOut();                                             // 올리고 나서
+    sheetLoad();                                           // 받는다
+  },SHEET_EVERY);
+  setInterval(pendPaint,30000);                            // 5분 경고를 제때 띄우려면 주기 갱신
+  pendPaint();
+}
+
+/* 불러오기: Apps Script는 리다이렉트로 CORS가 깨지므로 JSONP */
+function sheetLoad(force){
+  if(!SHEET) return;
+  const s=sess(); if(!s.name) return;
+  const now=Date.now();
+  if(!force && now-_sheetLast<SHEET_MIN) return;   // 연타 방지 (탭을 빨리 왔다갔다 해도 1번)
+  _sheetLast=now;
+  const cb="__cpxfb"+Math.random().toString(36).slice(2);
+  const sc=document.createElement("script");
+  let done=false;
+  function cleanup(){ try{ delete window[cb]; }catch(e){ window[cb]=undefined; }
+                      if(sc.parentNode) sc.parentNode.removeChild(sc); }
+  window[cb]=function(res){
+    done=true;
+    try{
+      /* 시계 오차 보정 — 이 응답이 오는 순간이 유일하게 서버 시각을 아는 때다.
+         이후 모든 저장 ts 는 srvNow() = 기기시계 + skew 로 찍힌다. */
+      if(res && res.now) setSkew(res.now);
+      /* 서버는 {items:{카드ID:{text,textTs,mn,mnTs,ddx,ddxTs,tag,tagTs,hl,hlTs,prog,progTs}}} 를 준다.
+         옛 rows 배열/옛 서버(필드별 ts 없음)도 그대로 받는다 */
+      const it=res&&res.items;
+      const rows=(it&&!Array.isArray(it))
+        ? Object.keys(it).map(k=>Object.assign({cardId:k},it[k]||{}))
+        : ((res&&res.rows)||(Array.isArray(res)?res:[]));
+      let ch=false, chm=false, chd=false, cht=false, chh=false, chp=false, chq=false;
+      /* 입력 중인 칸은 건드리지 않는다: 그 카드의 그 필드만 병합에서 빼고,
+         다시 그리기는 포커스가 풀릴 때까지 미룬다(입력 내용·커서 보존). */
+      const busy=editingNow();
+      const skip=(id,f)=>!!(busy && busy.id===id && busy.field===f);
+      rows.forEach(r=>{
+        if(!r||!r.cardId) return;
+        if(r.name && r.name!==s.name) return;          // 본인 것만
+        const id=r.cardId;
+        /* 필드별 수정시각. 서버가 그 키를 아예 안 주면(옛 서버) 행 ts 로 떨어진다.
+           키는 있는데 비었으면 0 = 아직 _ts 가 없는 옛 행 → 로컬이 이긴다(마이그레이션 규칙). */
+        const fts=k=>{ const v=r[k]; if(v===undefined) return +r.ts||0; return +v||0; };
+        /* 필드 하나를 병합한다 — 판단은 오직 _ts 비교다. 값이 뭐냐로는 아무것도 안 가린다.
+           빈 값도 정식 값이다(= 삭제·해제가 그대로 전파된다). 6개 필드 전부 같은 규칙.
+             hasLocal : 로컬에 레코드가 있나 (없는데 서버도 비었으면 할 일이 없다)
+             srvEmpty : 서버 값이 빈 값인가
+             sameVal  : 값이 이미 같은가 → ts 만 서버 시각으로 교정한다 */
+        function mergeF(srvTs,localTs,hasLocal,srvEmpty,sameVal,apply){
+          if(srvTs>localTs){
+            if(srvEmpty && !hasLocal) return false;      // 지울 것도 없다
+            apply(srvTs); return true;
+          }
+          /* 값이 같을 때의 ts 교정.
+             예전엔 srvTs!==localTs 이기만 하면 로컬 ts 를 서버 값으로 "내렸는데",
+             그러면 그 사이 다른 기기가 만든 더 옛 삭제(묘비)가 최신 편집을 이길 수 있다.
+             skew 보정이 들어온 뒤로 정상 경로에서는 두 ts 가 같으므로,
+             내리는 건 로컬 ts 가 명백히 미래로 튄 경우(=skew 를 모르던 첫 저장)로만 좁힌다. */
+          if(srvTs>0 && hasLocal && sameVal && localTs>srvNow()+60000){ apply(srvTs); return true; }
+          return false;
+        }
+
+        /* 메모 */
+        if(r.text!==undefined){
+          const txt=String(r.text==null?"":r.text), sts=fts("textTs");
+          if(!skip(id,"text")){
+            const cur=fb[id], lts=+(cur&&cur.ts)||0;
+            if(mergeF(sts,lts,!!cur,!txt, !!cur&&String(cur.text||"")===txt,
+                      t=>{ fb[id]={text:txt,ts:t}; })) ch=true;
+          }
+          if(pendClear(id,"text",txt,sts)) chq=true;
+        }
+        /* 말야마 — 빈 값이면 "원래대로"가 전파된 것이다(로컬 override 를 비운다) */
+        if(r.mn!==undefined){
+          const mtx=String(r.mn==null?"":r.mn).trim(), sts=fts("mnTs");
+          if(!skip(id,"mn")){
+            const cm=mnOv[id], lts=+(cm&&cm.ts)||0;
+            if(mergeF(sts,lts,!!cm,!mtx, !!cm&&String(cm.text||"")===mtx,
+                      t=>{ mnOv[id]={text:mtx,ts:t}; })) chm=true;
+          }
+          if(pendClear(id,"mn",mtx,sts)) chq=true;
+        }
+        /* 감별진단: 말야마와 완전히 같은 규칙 */
+        if(r.ddx!==undefined){
+          const dtx=String(r.ddx==null?"":r.ddx).trim(), sts=fts("ddxTs");
+          if(!skip(id,"ddx")){
+            const cd=ddxOv[id], lts=+(cd&&cd.ts)||0;
+            if(mergeF(sts,lts,!!cd,!dtx, !!cd&&String(cd.text||"")===dtx,
+                      t=>{ ddxOv[id]={text:dtx,ts:t}; })) chd=true;
+          }
+          if(pendClear(id,"ddx",dtx,sts)) chq=true;
+        }
+        /* 컬러태그 — 빈 값이면 "미지정"이 전파된 것이다 */
+        if(r.tag!==undefined){
+          const raw=String(r.tag==null?"":r.tag).trim(), sts=fts("tagTs");
+          const tv=(raw==="hard"||raw==="mid"||raw==="easy")?raw:"";
+          const ct=tagOv[id], lts=+(ct&&ct.ts)||0;
+          if(mergeF(sts,lts,!!ct,!tv, !!ct&&String(ct.v||"")===tv,
+                    t=>{ tagOv[id]={v:tv,ts:t}; })) cht=true;
+          if(pendClear(id,"tag",tv,sts)) chq=true;
+        }
+        /* 형광펜: 서버가 객체로 주거나 JSON 문자열로 준다. 파싱 실패는 빈 값으로 본다.
+           빈 값이면 "형광펜 전부 해제"가 전파된 것이다 */
+        if(r.hl!==undefined){
+          let hv=r.hl;
+          if(typeof hv==="string"){ const t2=hv.trim();
+            if(!t2) hv=null; else { try{ hv=JSON.parse(t2); }catch(e){ hv=null; } } }
+          const mnA=(hv&&Array.isArray(hv.mn))?hv.mn:[], ddxA=(hv&&Array.isArray(hv.ddx))?hv.ddx:[];
+          const sts=fts("hlTs"), chl=hlOv[id], lts=+(chl&&chl.ts)||0;
+          const same=!!chl && JSON.stringify(Array.isArray(chl.mn)?chl.mn:[])===JSON.stringify(mnA)
+                           && JSON.stringify(Array.isArray(chl.ddx)?chl.ddx:[])===JSON.stringify(ddxA);
+          const mk=t=>{ const nr={ts:t};
+            if(mnA.length) nr.mn=mnA; if(ddxA.length) nr.ddx=ddxA; hlOv[id]=nr; };
+          if(mergeF(sts,lts,!!chl,!mnA.length&&!ddxA.length,same,mk)) chh=true;
+          if(pendClear(id,"hl",hv,sts)) chq=true;
+        }
+        /* 진도: cpx_progress 는 형식 그대로(빈 값은 키 삭제), ts 는 cpx_progress_ts 에서 본다.
+           빈 값이면 "평가 해제"가 전파된 것이다 */
+        if(r.prog!==undefined){
+          const raw=String(r.prog==null?"":r.prog).trim(), sts=fts("progTs");
+          const pv=(raw==="know"||raw==="dont")?raw:"";
+          const lts=+progTs[id]||0;
+          const hasLocal=(prog[id]!==undefined)||(progTs[id]!==undefined);
+          if(mergeF(sts,lts,hasLocal,!pv, String(prog[id]||"")===pv,
+                    t=>{ if(pv) prog[id]=pv; else delete prog[id]; progTs[id]=t; })) chp=true;
+          if(pendClear(id,"prog",pv,sts)) chq=true;
+        }
+      });
+      if(ch) fbSaveLS();
+      if(chm) mnSaveLS();
+      if(chd) ddxSaveLS();
+      if(cht) tagSaveLS();
+      if(chh) hlSaveLS();
+      if(chp){ localStorage.setItem(LS_PROG,JSON.stringify(prog));
+               try{ localStorage.setItem(LS_PTS,JSON.stringify(progTs)); }catch(e){} }
+      if(chq) pendSave();
+      /* 여기까지 왔다 = 서버 응답을 읽었다 = 백업 경로가 살아 있다 */
+      if(!(res&&res.ok===false)){ try{ localStorage.setItem(LS_OK,String(Date.now())); }catch(e){} }
+      pendPaint();
+      if(ch||chm||chd||cht||chh||chp){
+        if(busy) _needRender=true;                   // 입력 중이면 focusout 뒤로 미룬다
+        else renderKeep();                           // 자동갱신이므로 스크롤 위치는 지킨다
+      }
+    }catch(e){}
+    cleanup();
+  };
+  sc.onerror=cleanup;
+  sc.src=SHEET+(SHEET.indexOf("?")<0?"?":"&")+"callback="+cb
+        +"&name="+encodeURIComponent(s.name)+"&code="+encodeURIComponent(s.code||"")
+        +"&_="+Date.now();
+  document.head.appendChild(sc);
+  setTimeout(()=>{ if(!done) cleanup(); },12000);
+}
+
+/* 타이핑 중 로컬 즉시저장(디바운스). 시트로는 저장 버튼에서 즉시,
+   저장을 안 눌러도 dirty 로 표시해 두면 2분 주기·탭 이탈·종료 때 자동으로 밀려 나간다. */
+let fbPending=null, fbTimer=null;
+function fbTouch(id,text){ fbPending={id:id,text:text};
+  clearTimeout(fbTimer); fbTimer=setTimeout(fbFlush,400); }
+function fbFlush(){
+  clearTimeout(fbTimer);
+  if(!fbPending) return;
+  const id=fbPending.id, t=String(fbPending.text||"").trim();
+  fbPending=null;
+  fb[id]={text:t,ts:srvNow()};              // 빈 값도 레코드로 남긴다(묘비)
+  fbSaveLS();
+  dirtyMark(id,"text");                     // 아직 push 안 함
+}
+function fbCommit(id,text,cardName){
+  fbPending=null; clearTimeout(fbTimer);
+  const t=String(text||"").trim(), ts=srvNow();
+  fb[id]={text:t,ts:ts};                    // 비우기도 묘비로 남겨야 시트의 옛 메모가 안 되살아난다
+  fbSaveLS();
+  const s=sess();
+  /* 메모만 보낸다 — mn 키를 안 넣어야 서버가 시트의 말야마를 유지한다 */
+  sheetPush({name:s.name||"",code:s.code||"",cardId:id,cardName:cardName||"",text:t,ts:ts});
+  return ts;
+}
+
+/* ── 말야마: 타이핑 중 로컬 즉시저장(디바운스), 시트 전송은 저장 버튼에서만 ── */
+let mnPending=null, mnTimer=null;
+function mnTouch(card,text){ mnPending={card:card,text:text};
+  clearTimeout(mnTimer); mnTimer=setTimeout(mnFlush,400); }
+function mnFlush(){
+  clearTimeout(mnTimer);
+  if(!mnPending) return;
+  const c=mnPending.card, t=mnPending.text; mnPending=null;
+  mnSet(c,t,srvNow());
+  dirtyMark(c.id,"mn");
+}
+function mnCommit(card,text){
+  mnPending=null; clearTimeout(mnTimer);
+  const ts=srvNow(), t=String(text||"").trim();
+  const revert = (!t || t===mnBase(card));      // 원본 복귀
+  mnSet(card,t,ts);
+  const s=sess();
+  /* 말야마만 보낸다 — text 키를 안 넣어야 서버가 시트의 메모를 유지한다.
+     되돌리기는 빈 문자열 = "시트에서도 지워라". */
+  sheetPush({name:s.name||"",code:s.code||"",cardId:card.id,cardName:card.name,
+             mn: revert?"":t, ts:ts});
+  return ts;
+}
+/* ── 시트 전송 공통 — 보낸 필드만 서버가 갱신한다. 키를 안 넣으면 서버는 기존 값·기존 _ts 유지.
+   ts 는 srvNow()(서버시계로 환산한 지금)로 함께 보낸다. 큐에 들어가 며칠 뒤 재전송돼도
+   그때의 도착 시각이 아니라 "원래 저장한 시각"으로 남아야 하기 때문이다. ── */
+function pushField(card,fields,ts){
+  const s=sess();
+  sheetPush(Object.assign({name:s.name||"",code:s.code||"",
+                           cardId:card.id,cardName:card.name||"",
+                           ts:(ts===undefined?srvNow():ts)},fields));
+}
+
+/* ── 감별진단: 말야마와 똑같은 디바운스 + 저장 버튼에서만 시트 전송 ── */
+let ddxPending=null, ddxTimer=null;
+function ddxTouch(card,text){ ddxPending={card:card,text:text};
+  clearTimeout(ddxTimer); ddxTimer=setTimeout(ddxFlush,400); }
+function ddxFlush(){
+  clearTimeout(ddxTimer);
+  if(!ddxPending) return;
+  const c=ddxPending.card, t=ddxPending.text; ddxPending=null;
+  ddxSet(c,t,srvNow());
+  dirtyMark(c.id,"ddx");
+}
+function ddxCommit(card,text){
+  ddxPending=null; clearTimeout(ddxTimer);
+  const ts=srvNow(), t=String(text||"").trim();
+  const revert=(!t || t===ddxBase(card));           // 원본 복귀
+  ddxSet(card,t,ts);
+  pushField(card,{ddx: revert?"":t},ts);         // 되돌리기는 빈 문자열 = 시트에서도 지워라
+  return ts;
+}
+
+/* ── 컬러태그 / 형광펜 / 진도: 값이 바뀌는 즉시 시트로 ── */
+function tagCommit(card,v){
+  const ts=srvNow();
+  tagSet(card,v,ts);
+  pushField(card,{tag: tagOf(card)},ts);         // 미지정이면 빈 문자열
+  return ts;
+}
+function hlCommit(card){
+  const ts=srvNow();
+  const r=hlRec(card.id);
+  /* hlToggle 이 이미 srvNow() 로 로컬 ts 를 찍어 두었다 — 그 값을 그대로 도장으로 쓴다 */
+  const lts=+r.ts||ts;
+  const payload={mn:Array.isArray(r.mn)?r.mn:[], ddx:Array.isArray(r.ddx)?r.ddx:[]};
+  const empty=!payload.mn.length && !payload.ddx.length;
+  pushField(card,{hl: empty?"":JSON.stringify(payload)},lts);
+  return lts;
+}
+function progCommit(card){
+  const ts=srvNow();
+  progTs[card.id]=ts;
+  try{ localStorage.setItem(LS_PTS,JSON.stringify(progTs)); }catch(e){}
+  pushField(card,{prog: prog[card.id]||""},ts);
+  return ts;
+}
+
+window.addEventListener("beforeunload",fbFlush);
+window.addEventListener("beforeunload",mnFlush);
+window.addEventListener("beforeunload",ddxFlush);
+window.addEventListener("online",()=>{ queueFlush(); flushDirty(); });
+
+/* ── 두 탭 동시 열기 대비 ────────────────────────────────────
+   각 탭은 render() 마다 save() 로 prog/set 전체를 덮어쓴다. 다른 탭이 바꾼 걸 안 읽으면
+   낡은 탭의 자동갱신 한 번만으로도 최신 진도가 되돌아간다.
+   → storage 이벤트(같은 탭에서는 안 온다)로 다른 탭의 변경을 메모리에 즉시 반영한다.
+   set 은 화면 표시 계열만 받는다 — 검색·필터·계통·섞기·현재카드는 탭마다 따로 놀아야
+   덱(deck)과 상태가 어긋나지 않는다. */
+const SET_SYNC=["cover","two","cols","libName","libMn","libDdx","libFb",
+                "pTitle","pMn","pDdx","pFb","pFull","pTarget","pSys","pCols","libTab"];
+function lsSnap(k){
+  if(k===LS_SET){ const o={}; SET_SYNC.forEach(x=>{ o[x]=set[x]; }); return JSON.stringify(o); }
+  const m={};
+  m[LS_PROG]=prog; m[LS_FB]=fb; m[LS_MN]=mnOv; m[LS_DDX]=ddxOv;
+  m[LS_TAG]=tagOv; m[LS_HL]=hlOv; m[LS_PTS]=progTs; m[LS_PEND]=pend; m[LS_DIRTY]=dirty;
+  return (k in m)?JSON.stringify(m[k]):null;
+}
+function reloadLS(k){                       // 실제로 메모리 상태가 달라졌으면 true
+  const before=lsSnap(k);
+  if(before===null) return false;           // 우리가 안 보는 키
+  if(k===LS_PROG)       prog=lsObjSafe(LS_PROG);
+  else if(k===LS_SET){  const s2=lsObjSafe(LS_SET);
+                        SET_SYNC.forEach(x=>{ if(s2[x]!==undefined) set[x]=s2[x]; }); }
+  else if(k===LS_FB)    fb=lsObj(LS_FB);
+  else if(k===LS_MN)    mnOv=lsObj(LS_MN);
+  else if(k===LS_DDX)   ddxOv=lsObj(LS_DDX);
+  else if(k===LS_TAG)   tagOv=lsObj(LS_TAG);
+  else if(k===LS_HL)    hlOv=lsObj(LS_HL);
+  else if(k===LS_PTS)   progTs=lsObj(LS_PTS);
+  else if(k===LS_PEND)  pend=lsObj(LS_PEND);
+  else if(k===LS_DIRTY) dirty=lsObj(LS_DIRTY);
+  return lsSnap(k)!==before;
+}
+window.addEventListener("storage",e=>{
+  if(!e.key) return;                        // localStorage.clear() 는 무시
+  if(!reloadLS(e.key)) return;              // 달라진 게 없으면 다시 안 그린다(탭 간 핑퐁 방지)
+  if(e.key===LS_PEND||e.key===LS_DIRTY){ pendPaint(); return; }
+  if(editingNow()){ _needRender=true; return; }   // 입력 중이면 focusout 뒤로 미룬다
+  renderKeep();
+});
 
 function buildDeck(keepId){
   let d=CARDS.slice();
@@ -600,18 +2017,22 @@ function buildDeck(keepId){
   if(set.filter==="dont") d=d.filter(c=>prog[c.id]==="dont");
   if(set.filter==="unrated") d=d.filter(c=>!prog[c.id]);
   const q=set.search.trim().toLowerCase();
-  if(q) d=d.filter(c=>(c.name+" "+c.ddx.join(" ")+" "+c.a.mn+" "+c.a.items.join(" ")).toLowerCase().includes(q));
+  if(q) d=d.filter(c=>haystack(c).includes(q));
   if(set.shuf) shuffle(d);
   deck=d;
   pos=0;
   if(keepId){const i=deck.findIndex(c=>c.id===keepId); if(i>=0) pos=i;}
   flipped=false;
+  libRand=null;                     // 대상 집합이 바뀌었으니 랜덤 순서도 새로
+}
+/* ddx는 문자열, a.items는 없을 수 있음 → 예전 .join() 호출은 검색을 통째로 죽였다 */
+function haystack(c){
+  return [c.name, c.sys, ddxOf(c), mnOf(c),
+          ((c.a&&c.a.items)||[]).join(" "),
+          (c.script||[]).join(" "),
+          c.tests||"", c.edu||"", fbText(c.id)].join(" ").toLowerCase();
 }
 
-function resetReveal(){
-  const two=set.two;
-  rv = set.cover ? {ddx:false,c:false,f:false,a:0} : {ddx:true,c:true,f:true,a:two?1:3};
-}
 
 function chipsHtml(){
   const sysList=[...new Set(CARDS.map(c=>c.sys))];
@@ -625,52 +2046,138 @@ function chipsHtml(){
 function progressBar(){
   let k=0,d=0,u=0;
   for(const c of CARDS){const p=prog[c.id]; if(p==="know")k++; else if(p==="dont")d++; else u++;}
-  const T=CARDS.length;
-  $("pbar").innerHTML=
-    `<div style="width:${k/T*100}%;background:var(--know)"></div>`+
-    `<div style="width:${d/T*100}%;background:var(--dont)"></div>`+
-    `<div style="width:${u/T*100}%;background:var(--unrated)"></div>`;
+  // 답안지 타이밍 마크: 카드 1장 = 눈금 1칸
+  $("pbar").innerHTML = CARDS.map(c=>{
+    const p=prog[c.id];
+    return `<span class="${p==="know"?"know":p==="dont"?"dont":""}" title="${c.name}"></span>`;
+  }).join("");
   $("pstats").innerHTML=
     `<span><i class="dot" style="background:var(--know)"></i>외움 <b>${k}</b></span>`+
     `<span><i class="dot" style="background:var(--dont)"></i>모름 <b>${d}</b></span>`+
-    `<span><i class="dot" style="background:var(--unrated)"></i>미평가 <b>${u}</b></span>`+
-    `<span style="margin-left:auto">/ ${T}</span>`;
+    `<span><i class="dot" style="background:var(--unrated)"></i>미평가 <b>${u}</b></span>`;
 }
 
-function field(key,title,inner,tappable){
-  const hidden = set.cover && !rv[key];
-  return `<div class="field ${hidden?'hidden tap':''} ${tappable&&!hidden?'tap':''}" data-f="${key}">
-    <h4>${title}${hidden?'<span class="lock">눌러서 공개 ▾</span>':''}</h4>
-    <div class="body">${inner}</div></div>`;
-}
 
-function aFieldHtml(card){
-  const hidden = set.cover && rv.a===0;
-  if(hidden) return `<div class="field hidden tap" data-f="a"><h4>A (동반증상)<span class="lock">눌러서 공개 ▾</span></h4><div class="body"></div></div>`;
-  const stage=rv.a;
-  let inner=`<div class="mn">${card.a.mn}</div>`;
-  if(stage>=2){
-    inner+=`<div class="aitems">`+card.a.items.map(i=>`<span>${i}</span>`).join("")+`</div>`;
+
+
+
+/* ── v3: 실전 문진 순서 단계공개 ───────────────────────────── */
+const STEP_DEFS = [
+  {k:"old",   t:"① 주호소 (OLDCoEx)"},
+  {k:"c",     t:"② C (성상)"},
+  {k:"a",     t:"③ A (동반증상)"},
+  {k:"f",     t:"④ F (요인)"},
+  {k:"hx",    t:"⑤ 과거력 (E·외·과·약·사·가·여)"},
+  {k:"pe",    t:"⑥ P/E"},
+  {k:"dx",    t:"⑦ 진단 · 검사 · 교육"},
+  {k:"emerg", t:"⑧ 응급"},
+];
+const OLD_LABEL = {O:"O 발생",L:"L 위치",D:"D 기간/빈도",Co:"Co 경과",Ex:"Ex 이전",
+                   주호소:"주호소", 인적사항:"인적사항"};
+const HX_LABEL = {E:"E 검사력",외:"외 외상·수술",과:"과 과거력",약:"약 약물",
+                  사:"사 사회력",가:"가 가족력",여:"여 여성력"};
+
+function hasStep(card,k){
+  if(k==="old")   return card.old && Object.keys(card.old).length;
+  if(k==="hx")    return card.hx  && Object.keys(card.hx).length;
+  if(k==="pe")    return card.pe  && Object.keys(card.pe).length;
+  if(k==="a")     return card.a && (mnOf(card) || card.a.exp);
+  if(k==="dx")    return ddxOf(card) || card.tests || card.edu;   // 사용자가 새로 적은 감별진단도 포함
+  return card[k];
+}
+function stepsOf(card){
+  if(card.script && card.script.length) return [{k:"script",t:"진행 스크립트"}];
+  return STEP_DEFS.filter(s=>hasStep(card,s.k));
+}
+function kvHtml(obj,labels){
+  return `<div class="kv">`+Object.entries(obj).map(([k,v])=>
+    `<div class="kvrow"><b>${labels[k]||k}</b><span>${v}</span></div>`).join("")+`</div>`;
+}
+function stepBody(card,k,full){
+  if(k==="script") return `<div class="script">`+card.script.map(l=>`<div>${l}</div>`).join("")+`</div>`;
+  if(k==="old")    return kvHtml(card.old,OLD_LABEL);
+  if(k==="hx")     return kvHtml(card.hx,HX_LABEL);
+  if(k==="pe")     return kvHtml(card.pe,{});
+  if(k==="c")      return card.c;
+  if(k==="f")      return card.f;
+  if(k==="emerg")  return `<span class="warn">${card.emerg}</span>`;
+  if(k==="dx"){
+    let h="";
+    /* 감별진단은 ddxOf()(=덮어쓰기 반영) + 형광펜을 거쳐 나온다. data-hlt 가 드래그 칠하기 대상 */
+    const dd=ddxOf(card);
+    if(dd)         h+=`<div class="kvrow"><b>진단</b><span><span data-hlt="ddx">${ddxDisp(card)}</span>`
+                     +(ddxEdited(card)?`<span class="mnflag" title="내가 고친 감별진단">✎</span>`:"")+`</span></div>`;
+    if(card.tests) h+=`<div class="kvrow"><b>검사</b><span>${card.tests}</span></div>`;
+    if(card.edu)   h+=`<div class="kvrow"><b>교육</b><span>${card.edu}</span></div>`;
+    return `<div class="kv">${h}</div>`;
   }
-  if(stage>=3){
-    inner+=`<div class="asks">`+card.a.items.map(i=>{
-      const q=ASK[i]||"— (질문 추가 예정)";
-      return `<div class="ask"><b>${i}</b><i>${q}</i></div>`;
-    }).join("")+`</div>`;
+  if(k==="a"){
+    const st = full ? 3 : ((rv&&rv.a)||1);
+    let h=`<div class="mn"><span data-hlt="mn">${mnDisp(card)||"—"}</span>`
+          +(mnEdited(card)?`<span class="mnflag" title="내가 고친 말야마">✎</span>`:"")+`</div>`;
+    if(st>=2 && card.a.exp) h+=`<div class="aexp">${card.a.exp}</div>`;
+    if(st>=3 && card.a.items && card.a.items.length)
+      h+=`<div class="asks">`+card.a.items.map(i=>
+        `<div class="ask"><b>${i}</b><i>${ASK[i]||"—"}</i></div>`).join("")+`</div>`;
+    if(set.two && st<3 && (card.a.exp||(card.a.items||[]).length))
+      h+=`<div class="astepwrap"><span class="astep">${st===1?"▾ 확장 보기":"▾ 실제 질문 보기"}</span></div>`;
+    return h;
   }
-  let step="";
-  if(set.two && stage<3) step=`<span class="astep">${stage===1?'▾ 확장 보기':'▾ 실제 질문 보기'}</span>`;
-  return `<div class="field tap" data-f="a"><h4>A (동반증상)${step}</h4><div class="body">${inner}</div></div>`;
+  return "";
+}
+function resetReveal(){
+  rv = {n: set.cover ? 0 : 99, a: set.two ? 1 : 3, skipped:{}};
+}
+function backHtml(card){
+  const steps=stepsOf(card);
+  const open = set.cover ? rv.n : steps.length;
+  let h=`<div class="steps">`;
+  steps.forEach((s,i)=>{
+    const isOpen = i<open;
+    const isNext = i===open;
+    const skipped = rv.skipped && rv.skipped[s.k];
+    h+=`<div class="step ${isOpen?"open":"locked"} ${isNext?"next":""} ${skipped?"skipped":""}" data-i="${i}" data-k="${s.k}">
+      <h4>${s.t}${isOpen?(skipped?'<span class="lock miss">건너뜀</span>':""):(isNext?'<span class="lock">탭 ▾</span>':'<span class="lock dim">🔒</span>')}</h4>
+      ${isOpen?`<div class="body">${stepBody(card,s.k)}</div>`:``}</div>`;
+  });
+  h+=`</div>`;
+  if(set.cover && open<steps.length)
+    h+=`<div class="stepbar"><span class="toggle" id="nextStep">다음 단계 ▾ (${open}/${steps.length})</span>
+        <span class="toggle" id="allSteps">전체 열기</span></div>`;
+  h+=`<div style="text-align:center;margin:6px 0 2px"><span class="toggle" id="reflip">↻ 앞면</span></div>`;
+  return h;
 }
 
+/* ═══ 뷰 분기 ═══ */
+/* 자동갱신(2분 주기·다른 탭 변경)으로 다시 그릴 때는 스크롤 위치를 지킨다.
+   사용자 조작으로 부른 render() 는 종전대로 맨 위로 올라간다. */
+let _keepScroll=false;
+function renderKeep(){ _keepScroll=true; try{ render(); } finally{ _keepScroll=false; } }
 function render(){
-  chipsHtml(); progressBar();
+  fbFlush(); mnFlush(); ddxFlush();              // 이동 전 입력중이던 메모·말야마·감별진단 확정
+  const v = (set.view==="lib"||set.view==="print") ? set.view : "card";
+  set.view=v;
+  /* 라이브러리에 "들어올 때"마다 랜덤 순서를 새로 만든다(순서 암기 방지).
+     라이브러리 안에서 표시 토글만 눌렀을 때는 다시 안 섞는다. */
+  if(v==="lib" && _lastView!=="lib") libRand=null;
+  _lastView=v;
+  ["card","lib","print"].forEach(x=>document.body.classList.toggle("v-"+x,v===x));
+  chipsHtml(); progressBar(); syncChrome();
+  if(v==="lib"){ renderLib(); save(); return; }
+  if(v==="print"){ renderPrint(); save(); return; }
+  renderCard();
+}
+function syncChrome(){
   [["tCover","cover"],["tTwo","two"],["tShuf","shuf"]].forEach(([id,k])=>$(id).classList.toggle("on",set[k]));
   $("fAll").classList.toggle("on",set.filter==="all");
   $("fDont").classList.toggle("on",set.filter==="dont");
   $("fUn").classList.toggle("on",set.filter==="unrated");
-  $("search").value=set.search;
+  if($("search").value!==set.search) $("search").value=set.search;
+  $("vsw").querySelectorAll("span").forEach(el=>el.classList.toggle("on",el.dataset.view===set.view));
+}
 
+/* ── 카드 뷰 (기존 render 본문) ── */
+function renderCard(){
   if(deck.length===0){
     $("main").innerHTML=`<div class="empty">조건에 맞는 카드가 없어요.<br>필터·검색을 바꿔보세요.</div>`;
     $("pos").textContent="0 / 0"; updateRate(); save(); return;
@@ -682,34 +2189,398 @@ function render(){
   const badge = p==="know"?`<span class="badge know">✓ 외움</span>`
               : p==="dont"?`<span class="badge dont">✗ 모름</span>`
               : `<span class="badge">미평가</span>`;
-  let html=`<div class="meta"><span>${card.sys}</span>${badge}</div>`;
+  let html=`<div class="meta"><span>${card.sys}</span>${badge}</div>`+tagbarHtml(card);
 
   if(!flipped){
     html+=`<div class="frontwrap"><div class="front" id="front">
       <div class="sym">${card.name}</div>
       <div class="hint">탭하거나 Space → 뒤집기</div></div></div>`;
   }else{
-    html+=field("ddx","감별",`<div class="ddx-list">`+card.ddx.map(d=>`<span>${d.includes('⚠️')?'<span class=warn>'+d+'</span>':d}</span>`).join("")+`</div>`,true);
-    html+=field("c","C (성상)", card.c.includes('⚠️')?`<span class="warn">${card.c}</span>`:card.c, true);
-    html+=aFieldHtml(card);
-    html+=field("f","F (요인)", card.f.includes('⚠️')?`<span class="warn">${card.f}</span>`:card.f, true);
-    html+=`<div style="text-align:center;margin:6px 0 2px"><span class="toggle" id="reflip">↻ 앞면</span></div>`;
-  }
+    html+=backHtml(card);
+    }
+  /* 말야마는 ③A 안의 내용이라 그 단계가 열린 뒤에만 편집칸을 보여준다 */
+  if(flipped && mnVisible(card)) html+=mnHtml(card);
+  /* 감별진단은 ⑦ 안의 내용이라 같은 논리로 ⑦ 공개 뒤에만 */
+  if(flipped && ddxVisible(card)) html+=ddxHtml(card);
+  html+=fbHtml(card);
+  const keepTop=_keepScroll?$("main").scrollTop:0;
   $("main").innerHTML=html;
-  $("main").scrollTop=0;
+  $("main").scrollTop=keepTop;
 
   if(!flipped){ $("front").onclick=()=>{flipped=true; resetReveal(); render();}; }
   else{
     $("reflip").onclick=()=>{flipped=false; render();};
-    $("main").querySelectorAll(".field.tap").forEach(el=>el.onclick=()=>{
-      const k=el.dataset.f;
-      if(k==="a"){ rv.a = set.two ? Math.min(rv.a+1,3) : 3; }
-      else rv[k]=true;
-      render();
+    $("main").querySelectorAll(".step").forEach(el=>el.onclick=()=>{
+      const steps=stepsOf(card), i=+el.dataset.i, k=el.dataset.k;
+      if(k==="a" && i<rv.n){ rv.a=set.two?Math.min(rv.a+1,3):3; render(); return; }
+      if(i<rv.n) return;
+      for(let x=rv.n;x<i;x++) rv.skipped[steps[x].k]=true;   // 건너뛴 단계 표시
+      rv.n=i+1; render();
     });
+    const ns=$("nextStep"); if(ns) ns.onclick=()=>{rv.n=Math.min(rv.n+1,stepsOf(card).length); render();};
+    const as=$("allSteps"); if(as) as.onclick=()=>{rv.n=stepsOf(card).length; render();};
   }
+  bindTag(card);
+  bindMn(card);
+  bindDdx(card);
+  bindFb(card);
   $("pos").textContent=`${pos+1} / ${deck.length}`;
   updateRate(); save();
+}
+
+/* ── 컬러태그 버튼 4개 (앞/뒤 상관없이 항상) ── */
+function tagbarHtml(card){
+  const cur=tagOf(card);
+  return `<div class="tagbar"><span class="lab">난이도</span>`
+    +TAGS.map(t=>`<span class="tagbtn ${cur===t.v?"on":""}" data-tag="${t.v}">${t.e} ${t.n}</span>`).join("")
+    +`</div>`;
+}
+function bindTag(card){
+  $("main").querySelectorAll(".tagbtn").forEach(el=>el.onclick=()=>{
+    const v=el.dataset.tag;
+    tagCommit(card, (v && tagOf(card)===v) ? "" : v);   // 같은 걸 다시 누르면 해제
+    render();
+  });
+}
+
+/* ── 말야마 편집 UI (③A 공개 뒤에만 노출) ── */
+/* 편집칸은 그 내용이 들어 있는 단계가 공개된 뒤에만 보인다 (③A → 말야마, ⑦ → 감별진단) */
+function stepVisible(card,k){
+  if(!set.cover) return true;                 // 가림 끄면 항상
+  const steps=stepsOf(card), ai=steps.findIndex(s=>s.k===k);
+  const open=rv?rv.n:0;
+  return ai>=0 ? open>ai : open>=steps.length;   // 해당 단계가 없는 스크립트 카드는 전부 연 뒤
+}
+const mnVisible =card=>stepVisible(card,"a");
+const ddxVisible=card=>stepVisible(card,"dx");
+
+/* ── 형광펜 UI: 드래그 선택 → 색 버튼 ──
+   버튼 클릭 순간 선택이 풀리는 브라우저가 있어, selectionchange 로 마지막 선택을 붙잡아 둔다. */
+/* 선택은 "어느 카드의" 선택인지까지 기록한다 — 카드를 넘긴 뒤 펜을 누르면
+   엉뚱한 카드의 문자열이 칠해지기 때문이다. */
+let _sel={f:null,t:"",id:null};
+document.addEventListener("selectionchange",()=>{
+  const s=window.getSelection();
+  if(!s||s.isCollapsed||!s.rangeCount) return;   // 빈 선택이면 직전 값을 유지한다
+  const t=String(s.toString()||"").trim();
+  if(!t) return;
+  if(set.view!=="card") return;                  // 카드 뷰에서만 칠한다
+  let n=s.getRangeAt(0).commonAncestorContainer;
+  if(n&&n.nodeType===3) n=n.parentNode;
+  const host=(n&&n.closest)?n.closest("[data-hlt]"):null;
+  if(!host) return;                              // 칠할 수 있는 영역 밖의 선택은 무시
+  if(host.closest(".pcard")) return;             // 프린트 뷰의 data-hlt 는 대상이 아니다
+  const cur=deck[pos];
+  _sel={f:host.getAttribute("data-hlt"), t:t, id:(cur&&cur.id)||null};
+});
+function penHtml(f){
+  return `<span class="pen" data-penf="${f}"><span class="lab">형광펜</span>`
+    +`<span class="penbtn y" data-pen="y" title="노랑으로 칠하기 (같은 곳 다시 선택+노랑 = 해제)"></span>`
+    +`<span class="penbtn p" data-pen="p" title="분홍으로 칠하기 (같은 곳 다시 선택+분홍 = 해제)"></span>`
+    +`<span class="penbtn x" data-pen="x" title="선택 영역의 형광펜 지우기">지우기</span></span>`;
+}
+function bindPen(card,f,msgId){
+  const msg=t=>{ const m=$(msgId); if(m) m.textContent=t; };
+  $("main").querySelectorAll('.pen[data-penf="'+f+'"] [data-pen]').forEach(el=>{
+    el.onmousedown=e=>e.preventDefault();        // 클릭으로 선택이 풀리지 않게
+    el.onclick=()=>{
+      /* 다른 카드에서 잡아둔 선택은 무시한다 */
+      if(_sel.f!==f || !_sel.t || _sel.id!==card.id){
+        msg("위쪽 글자를 드래그해 선택한 뒤 누르세요"); return; }
+      const sel=_sel.t;
+      if(hlToggle(card,f,sel,el.dataset.pen)){
+        hlCommit(card);
+        _sel={f:null,t:"",id:null};              // 해제하려면 다시 선택하게 한다
+        render();
+        const m=$(msgId);
+        if(m) m.textContent="형광펜 반영됨"+sheetNote();
+      }else{
+        msg("‘"+sel.slice(0,12)+"’ 은(는) 지금 원문에서 찾을 수 없어요");
+      }
+    };
+  });
+}
+function mnHtml(card){
+  const rec=mnOv[card.id], ed=mnEdited(card);
+  const when=ed&&rec&&rec.ts
+    ? new Date(rec.ts).toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
+  return `<div class="fbwrap mnwrap">
+    <div class="fbhead"><span class="lab">말야마 편집</span>
+      ${ed?`<span class="mnflag">✎ 수정됨</span>`:``}
+      <span class="fbmsg" id="mnMsg">${when?esc("최근 저장 "+when):""}</span></div>
+    <textarea id="mnText" placeholder="이 카드의 말야마를 직접 적어보세요 (비우고 저장하면 원본으로 돌아갑니다)">${esc(mnOf(card))}</textarea>
+    <div class="fbrow">
+      <span class="toggle" id="mnSave">저장</span>
+      <span class="toggle" id="mnReset">원래대로</span>
+      ${penHtml("mn")}
+      ${ed?`<span class="mnorig"><b>원본</b>${esc(mnBase(card))||"—"}</span>`:``}
+    </div></div>`;
+}
+function bindMn(card){
+  const ta=$("mnText"); if(!ta) return;
+  const msg=t=>{ const m=$("mnMsg"); if(m) m.textContent=t; };
+  bindPen(card,"mn","mnMsg");
+  ta.oninput=()=>mnTouch(card,ta.value);
+  $("mnSave").onclick=()=>{
+    const ts=mnCommit(card,ta.value);
+    render();                                    // 배지·라이브러리·프린트 즉시 반영
+    msg((mnEdited(card)?"저장됨 ":"원본으로 되돌림 ")
+      +new Date(ts).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})
+      +sheetNote());
+  };
+  $("mnReset").onclick=()=>{
+    mnCommit(card,"");
+    render();
+    msg("원본으로 되돌렸어요"+sheetNote());
+  };
+}
+
+/* ── 감별진단 편집 UI (⑦ 공개 뒤에만 노출) — 말야마 편집과 같은 상자·같은 규칙 ── */
+function ddxHtml(card){
+  const rec=ddxOv[card.id], ed=ddxEdited(card);
+  const when=ed&&rec&&rec.ts
+    ? new Date(rec.ts).toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
+  return `<div class="fbwrap ddxwrap">
+    <div class="fbhead"><span class="lab">감별진단 편집</span>
+      ${ed?`<span class="mnflag">✎ 수정됨</span>`:``}
+      <span class="fbmsg" id="ddxMsg">${when?esc("최근 저장 "+when):""}</span></div>
+    <textarea id="ddxText" placeholder="이 카드의 감별진단을 직접 적어보세요 (비우고 저장하면 원본으로 돌아갑니다)">${esc(ddxOf(card))}</textarea>
+    <div class="fbrow">
+      <span class="toggle" id="ddxSave">저장</span>
+      <span class="toggle" id="ddxReset">원래대로</span>
+      ${penHtml("ddx")}
+      ${ed?`<span class="mnorig"><b>원본</b>${esc(ddxBase(card))||"—"}</span>`:``}
+    </div></div>`;
+}
+function bindDdx(card){
+  const ta=$("ddxText"); if(!ta) return;
+  const msg=t=>{ const m=$("ddxMsg"); if(m) m.textContent=t; };
+  bindPen(card,"ddx","ddxMsg");
+  ta.oninput=()=>ddxTouch(card,ta.value);
+  $("ddxSave").onclick=()=>{
+    const ts=ddxCommit(card,ta.value);
+    render();                                    // 카드뷰·라이브러리·프린트 즉시 반영
+    msg((ddxEdited(card)?"저장됨 ":"원본으로 되돌림 ")
+      +new Date(ts).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})
+      +sheetNote());
+  };
+  $("ddxReset").onclick=()=>{
+    ddxCommit(card,"");
+    render();
+    msg("원본으로 되돌렸어요"+sheetNote());
+  };
+}
+
+/* ── 피드백 메모 UI ── */
+function fbHtml(card){
+  const rec=fb[card.id];
+  const when=rec&&rec.ts?new Date(rec.ts).toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
+  return `<div class="fbwrap">
+    <div class="fbhead"><span class="lab">피드백 메모</span>
+      <span class="fbmsg" id="fbMsg">${when?esc("최근 저장 "+when):""}</span></div>
+    <textarea id="fbText" placeholder="스터디 피드백·자주 틀리는 포인트를 적어두세요 (카드당 1개, 덮어쓰기)">${esc(fbText(card.id))}</textarea>
+    <div class="fbrow">
+      <span class="toggle" id="fbSave">저장</span>
+    </div></div>`;
+}
+function bindFb(card){
+  const ta=$("fbText"); if(!ta) return;
+  ta.oninput=()=>fbTouch(card.id,ta.value);
+  /* 비우려면 칸을 비우고 저장을 누르면 된다(빈 값도 정식 값 = 시트에서도 지워진다) */
+  $("fbSave").onclick=()=>{
+    const ts=fbCommit(card.id,ta.value,card.name);
+    $("fbMsg").textContent=(ta.value.trim()?"저장됨 ":"비웠어요 ")
+      +new Date(ts).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})+sheetNote();
+  };
+}
+
+/* ── 라이브러리 뷰 ── */
+let libTop=0, _libRO=null, _fitting=false, _roPrimed=false;
+function tileHtml(c){
+  const p=prog[c.id]||"";
+  const on={name:!!set.libName, mn:!!set.libMn, ddx:!!set.libDdx, fb:!!set.libFb};
+  if(!on.name&&!on.mn&&!on.ddx&&!on.fb) on.name=true;      // 전부 끄면 제목이라도
+  const mn=mnOf(c), ddx=ddxOf(c), f=fbText(c.id);
+  const tg=tagOf(c);
+  /* 태그는 "왼쪽 안쪽 띠(.tg-*)"로만 칠한다 — 테두리색(외움/모름)과 절대 안 섞이게 */
+  const tgc=tg?` tg tg-${tg}`:"";
+  const edFlag=(mnEdited(c)||ddxEdited(c))?`<span class="edm" title="내가 고침">✎</span>`:``;
+  let h=`<div class="tile ${p}${tgc}" data-id="${esc(c.id)}"><div class="tsys">${esc(c.sys)}`
+       +(tg?`<span class="tgm">${tagEmoji(tg)}</span>`:``)+edFlag+`</div>`;
+  if(on.name && on.mn)  h+=`<div class="tname">${esc(c.name)}</div>`;
+  if(on.mn){
+    // 말야마가 빈 카드(상담·산전진찰 등)는 대체 문구로 타일 유지
+    h+=`<div class="cell hero" title="${esc(mn||c.name)}">`+(mn?`<span>${mnDisp(c)}</span>`
+        :`<span class="mnempty">${on.name?"—":esc(c.name)}</span>`)+`</div>`;
+  }else if(on.name){
+    h+=`<div class="cell hero" title="${esc(c.name)}"><span>${esc(c.name)}</span></div>`;   // 말야마 끄면 제목이 주인공
+  }
+  if(on.ddx) h+=`<div class="cell tddx" title="${esc(ddx||"")}"><span>${ddx?ddxDisp(c):"—"}</span></div>`;
+  if(on.fb)  h+=`<div class="cell tfb" title="${esc(f||"")}"><span>${f?esc(f):"—"}</span></div>`;
+  return h+`</div>`;
+}
+/* 라이브러리 탭: 전체 │ 🔴 │ 🟡 │ 🟢 │ 랜덤.
+   기존 계통 칩·검색·모름만/미평가만 필터로 이미 좁혀진 deck 위에 "교집합"으로 얹는다.
+   랜덤은 라이브러리에 들어올 때마다 새로 섞는다(libRand=null 이면 다시 섞음). */
+const LIBTABS=[{v:"all",l:"전체"},{v:"hard",l:"🔴"},{v:"mid",l:"🟡"},{v:"easy",l:"🟢"},{v:"rand",l:"랜덤"}];
+function libList(){
+  const t=set.libTab||"all";
+  if(t==="hard"||t==="mid"||t==="easy") return deck.filter(c=>tagOf(c)===t);
+  if(t==="rand"){
+    if(!libRand || libRand.length!==deck.length) libRand=shuffle(deck.map(c=>c.id));
+    const by={}; deck.forEach(c=>by[c.id]=c);
+    return libRand.map(id=>by[id]).filter(Boolean);
+  }
+  return deck;
+}
+function renderLib(){
+  const tog=(k,label)=>`<span class="toggle ${set[k]?"on":""}" data-lib="${k}">${label}</span>`;
+  const list=libList();
+  let h=`<div class="cbar">
+    <span class="libtabs">`
+    +LIBTABS.map(t=>`<span class="${set.libTab===t.v?"on":""}" data-libtab="${t.v}">${t.l}</span>`).join("")
+    +`</span><span class="sep"></span>
+    <span class="lab">표시</span>${tog("libName","제목")}${tog("libMn","말야마")}${tog("libDdx","감별진단")}${tog("libFb","피드백")}
+    <span class="sep"></span><span class="lab">열</span>`
+    +[2,3,4].map(n=>`<span class="toggle ${set.cols===n?"on":""}" data-cols="${n}">${n}</span>`).join("")
+    +`<span class="cnt">${list.length}장 · 3행 고정</span></div>
+    <div class="libscroll" id="libscroll">`
+    +(list.length?`<div class="grid" id="libgrid" style="--cols:${set.cols}">${list.map(tileHtml).join("")}</div>`
+                 :`<div class="empty">조건에 맞는 카드가 없어요.<br>탭·필터·검색을 바꿔보세요.</div>`)
+    +`</div>`;
+  $("main").innerHTML=h;
+  $("main").querySelectorAll("[data-libtab]").forEach(el=>el.onclick=()=>{
+    const v=el.dataset.libtab;
+    if(v==="rand") libRand=null;            // 랜덤 탭은 누를 때마다 다시 섞는다
+    set.libTab=v; libTop=0; render();
+  });
+  $("main").querySelectorAll("[data-lib]").forEach(el=>el.onclick=()=>{ set[el.dataset.lib]=!set[el.dataset.lib]; render(); });
+  $("main").querySelectorAll("[data-cols]").forEach(el=>el.onclick=()=>{ set.cols=+el.dataset.cols; render(); });
+  $("main").querySelectorAll(".tile").forEach(el=>el.onclick=()=>{
+    const i=deck.findIndex(c=>c.id===el.dataset.id);
+    if(i>=0) pos=i;
+    flipped=false; resetReveal(); set.view="card"; render();
+  });
+  const sc=$("libscroll");
+  if(sc){
+    sc.scrollTop=libTop;
+    sc.onscroll=()=>{ libTop=sc.scrollTop; };
+    if(_libRO) _libRO.disconnect();
+    /* observe() 는 등록 직후 초기 콜백을 한 번 준다. 바로 아래 fitLib() 와 겹쳐
+       렌더마다 이분탐색이 2회 돌았다 → 첫 콜백은 흘려보낸다. */
+    if(window.ResizeObserver){
+      _roPrimed=false;
+      _libRO=new ResizeObserver(()=>{ if(!_roPrimed){ _roPrimed=true; return; } fitLibSoon(); });
+      _libRO.observe(sc);
+    }
+  }
+  fitLib();
+}
+/* 창 크기 변경·확대축소는 연속으로 쏟아진다 — 마지막 한 번만 계산한다 */
+let _fitT=null;
+function fitLibSoon(){ clearTimeout(_fitT); _fitT=setTimeout(fitLib,120); }
+/* 보이는 스크롤 영역 높이를 실측해 정확히 3행으로 등분.
+   창 크기·브라우저 확대축소(⌘+/−)가 바뀌어도 ResizeObserver가 다시 잡는다. */
+function fitLib(){
+  if(_fitting) return;
+  const sc=$("libscroll"), g=$("libgrid");
+  if(!sc||!g) return;
+  _fitting=true;
+  try{
+    const cs=getComputedStyle(sc);
+    const padv=(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0);
+    const gap=parseFloat(getComputedStyle(g).rowGap)||0;
+    const rows=3;
+    const rowh=(sc.clientHeight - padv - gap*(rows-1))/rows;
+    g.style.setProperty("--rowh", Math.max(56,rowh)+"px");
+    fitTiles();
+  }finally{ _fitting=false; }
+}
+/* 칸(.cell)마다 글자를 제 칸에 들어가는 최대 크기로 맞춘다(잘림 방지). 이분탐색 9회.
+   상한은 칸 종류별로 다르다 — 말야마/제목은 26px, 감별·피드백은 13px.
+   피드백은 최소 3줄이 읽혀야 하므로 하한을 "칸높이 ÷ 3줄"까지 낮춘다.
+   200자짜리 초장문은 1/9 화면에 온전히 넣는 게 물리적으로 불가능하므로
+   하한까지 줄이고도 남으면 하단 페이드로 "더 있음"을 알린다(하드 컷 금지). */
+const FB_MINLINES=3;
+function fitTiles(){
+  document.querySelectorAll(".tile .cell").forEach(box=>{
+    const sp=box.firstElementChild; if(!sp) return;
+    const cs=getComputedStyle(box);
+    const H=box.clientHeight-(parseFloat(cs.paddingTop)||0)-(parseFloat(cs.paddingBottom)||0);
+    const W=box.clientWidth -(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0);
+    if(H<=0||W<=0) return;
+    const isHero=box.classList.contains("hero");
+    const lh=isHero?1.3:1.34;                 // CSS의 line-height와 맞춰둘 것
+    let lo,hi;
+    if(isHero){ lo=7; hi=Math.max(8,Math.min(26,H*0.62)); }
+    else{
+      hi=Math.max(7,Math.min(13,H/lh));       // 한 줄도 안 들어갈 만큼 낮은 칸이면 더 줄임
+      // 피드백은 3줄 확보가 우선 — 하한을 칸높이/3줄까지 내린다
+      lo=box.classList.contains("tfb")?Math.max(5,Math.min(7,H/(FB_MINLINES*lh))):7;
+      if(hi<lo) hi=lo;
+    }
+    const fits=()=>sp.scrollHeight<=H+0.5 && sp.scrollWidth<=W+0.5;
+    let best=lo;
+    for(let i=0;i<9;i++){
+      const mid=(lo+hi)/2;
+      sp.style.fontSize=mid+"px";
+      if(fits()){ best=mid; lo=mid; } else hi=mid;
+    }
+    // 내림으로 확정 — 반올림하면 방금 통과한 크기보다 커져 헛페이드가 뜬다
+    sp.style.fontSize=(Math.floor(best*10)/10)+"px";
+    box.classList.toggle("clip", !fits());
+  });
+}
+window.addEventListener("resize",()=>{ if(set.view==="lib") fitLibSoon(); });
+
+/* ── 프린트 뷰 ── */
+function printSet(){
+  let d=CARDS.slice();
+  if(set.pSys!=="all") d=d.filter(c=>c.sys===set.pSys);
+  if(set.pTarget==="dont") d=d.filter(c=>prog[c.id]==="dont");
+  else if(set.pTarget==="fb") d=d.filter(c=>fbText(c.id));
+  return d;
+}
+function pcardHtml(c){
+  let h=`<div class="pcard">`;
+  if(set.pTitle) h+=`<h3>${esc(c.name)}<span class="psys">${esc(c.sys)}</span></h3>`;
+  if(set.pMn){ const mn=mnOf(c);
+    if(mn) h+=`<div class="pmn">${mnEdited(c)?`<span class="pedit">✎</span>`:``}${mnDisp(c)}</div>`; }
+  if(set.pDdx){ const d=ddxOf(c);
+    if(d) h+=`<div class="pddx"><b>감별</b>${ddxEdited(c)?`<span class="pedit">✎</span>`:``}${ddxDisp(c)}</div>`; }
+  if(set.pFb){ const f=fbText(c.id); if(f) h+=`<div class="pfb"><b>메모</b>${esc(f)}</div>`; }
+  if(set.pFull){
+    h+=`<div class="psteps">`;
+    stepsOf(c).forEach(s=>{ h+=`<div class="pstep"><b>${s.t}</b>${stepBody(c,s.k,true)}</div>`; });
+    h+=`</div>`;
+  }
+  return h+`</div>`;
+}
+function renderPrint(){
+  const tog=(k,label)=>`<span class="toggle ${set[k]?"on":""}" data-pr="${k}">${label}</span>`;
+  const tgt=(v,label)=>`<span class="toggle ${set.pTarget===v?"on":""}" data-ptarget="${v}">${label}</span>`;
+  const sysList=[...new Set(CARDS.map(c=>c.sys))];
+  const list=printSet();
+  let h=`<div class="cbar">
+    <span class="lab">포함</span>${tog("pTitle","제목")}${tog("pMn","말야마")}${tog("pDdx","감별진단")}${tog("pFb","피드백")}${tog("pFull","8단계 전문")}
+    <span class="sep"></span><span class="lab">대상</span>${tgt("all","전체")}${tgt("dont","모름만")}${tgt("fb","피드백만")}
+    <select class="sel" id="pSysSel"><option value="all">계통 전체</option>`
+    +sysList.map(s=>`<option value="${esc(s)}"${set.pSys===s?" selected":""}>${esc(s)}</option>`).join("")
+    +`</select>
+    <span class="sep"></span><span class="lab">배치</span>`
+    +[1,2,3].map(n=>`<span class="toggle ${set.pCols===n?"on":""}" data-pcols="${n}">${n}단</span>`).join("")
+    +`<span class="sep"></span><span class="toggle" id="pGo">🖨 인쇄</span>
+    <span class="cnt">${list.length}장</span></div>
+    <div class="prscroll">`
+    +(list.length?`<div id="printdoc" class="c${set.pCols}">${list.map(pcardHtml).join("")}</div>`
+                 :`<div class="empty">조건에 맞는 카드가 없어요.</div>`)
+    +`</div>`;
+  $("main").innerHTML=h;
+  $("main").querySelectorAll("[data-pr]").forEach(el=>el.onclick=()=>{ set[el.dataset.pr]=!set[el.dataset.pr]; render(); });
+  $("main").querySelectorAll("[data-ptarget]").forEach(el=>el.onclick=()=>{ set.pTarget=el.dataset.ptarget; render(); });
+  $("main").querySelectorAll("[data-pcols]").forEach(el=>el.onclick=()=>{ set.pCols=+el.dataset.pcols; render(); });
+  $("pSysSel").onchange=e=>{ set.pSys=e.target.value; render(); };
+  $("pGo").onclick=()=>window.print();
 }
 
 function updateRate(){
@@ -722,17 +2593,28 @@ function rate(v){
   const card=deck[pos];
   prog[card.id] = (prog[card.id]===v)?undefined:v;
   if(prog[card.id]===undefined) delete prog[card.id];
-  // 모름만/미평가만 모드에서 상태가 바뀌면 자동으로 다음으로
-  if((set.filter==="dont"||set.filter==="unrated")){
-    const id=card.id; buildDeck();
-    // 방금 카드가 빠졌으면 같은 자리(다음 카드) 유지
-    if(!deck.find(c=>c.id===id)){ /* pos already 0..; keep */ }
-    render();
-  } else { render(); }
+  progCommit(card);                  // 진도도 기기 간 동기화 대상
+  /* 모름만/미평가만 모드에서는 방금 평가한 카드가 조건에서 빠질 수 있다.
+     buildDeck() 은 pos 를 0 으로 되돌리므로(=첫 카드로 튐) 자리를 직접 잡아준다.
+       - 아직 덱에 남아 있으면 그 카드 그대로
+       - 빠졌으면 같은 인덱스 = 그 자리로 당겨온 "다음 카드" */
+  if(set.filter==="dont"||set.filter==="unrated"){
+    const id=card.id, at=pos;
+    buildDeck();
+    const i=deck.findIndex(c=>c.id===id);
+    if(i>=0) pos=i;
+    else if(deck.length){ pos=Math.min(at,deck.length-1); flipped=false; resetReveal(); }
+    else pos=0;
+  }
+  render();
 }
 function go(n){ if(!deck.length) return; pos=(pos+n+deck.length)%deck.length; flipped=false; render(); }
 
 // events
+$("vsw").querySelectorAll("span").forEach(el=>el.onclick=()=>{
+  if(set.view===el.dataset.view) return;
+  set.view=el.dataset.view; render();
+});
 $("tCover").onclick=()=>{set.cover=!set.cover; if(flipped)resetReveal(); render();};
 $("tTwo").onclick=()=>{set.two=!set.two; if(flipped)resetReveal(); render();};
 $("tShuf").onclick=()=>{set.shuf=!set.shuf; buildDeck(); render();};
@@ -746,11 +2628,14 @@ $("bPrev").onclick=()=>go(-1);
 $("bNext").onclick=()=>go(1);
 document.addEventListener("keydown",e=>{
   const g=document.getElementById("gate"); if(g && !g.classList.contains("hidden")) return;
-  if(document.activeElement===$("search")) return;
+  const ae=document.activeElement;
+  if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;   // 메모 입력 중 단축키 차단
+  if(set.view!=="card") return;                                    // 카드 뷰에서만
   if(e.key==="ArrowLeft")go(-1);
   else if(e.key==="ArrowRight")go(1);
   else if(e.key===" "){e.preventDefault(); if(!flipped){flipped=true;resetReveal();} else flipped=false; render();}
-  else if(e.key==="ArrowUp"){ if(flipped){rv={ddx:true,c:true,f:true,a:3}; render();} }
+  else if(e.key==="ArrowUp"){ if(flipped){const c=deck[pos]; if(c){rv.n=stepsOf(c).length; rv.a=3; render();}} }
+  else if(e.key==="ArrowDown"){ if(flipped){const c=deck[pos]; if(c){rv.n=Math.min(rv.n+1,stepsOf(c).length); render();}} }
   else if(e.key==="1")rate("know");
   else if(e.key==="2")rate("dont");
 });
@@ -764,11 +2649,26 @@ async function gateInit(){
   try{ const r=await fetch('config.json?_='+Date.now(),{cache:'no-store'}); cfg=await r.json(); }
   catch(e){ body.innerHTML='<p>설정을 불러올 수 없어요.<br>잠시 후 다시 시도하거나 관리자에게 문의하세요.</p>'; return; }
   if(!cfg.open){ body.innerHTML='<p>지금은 닫혀 있어요.<br>관리자에게 문의하세요.</p>'; localStorage.removeItem(GATE_KEY); return; }
+  SHEET = String(cfg.sheet||'').trim();   // 비어 있으면 구글시트 백업은 조용히 비활성
   function enter(name){
     localStorage.setItem(GATE_KEY,JSON.stringify({name:name,code:cfg.code}));
     gate.classList.add('hidden');
-    if(!document.querySelector('.gwho')){ const w=document.createElement('div'); w.className='gwho'; w.textContent='👤 '+name; document.body.appendChild(w); }
+    const w=document.getElementById('gwho'); if(w) w.textContent='👤 '+name;
     startApp();
+    /* 헤더 백업 표시: 누르면 큐·미전송·미확인분을 한 번에 다시 밀어내고 곧바로 확인한다 */
+    const bk=document.getElementById("bkStat");
+    if(bk) bk.onclick=()=>{
+      if(!SHEET) return;
+      bk.textContent="다시 보내는 중…";
+      queueFlush(); flushDirty(); retryPending();
+      setTimeout(()=>sheetLoad(true),1200);
+    };
+    bindBulkBtn();     // 헤더 "전체 저장" (시트 미설정이면 숨김)
+    queueFlush();      // 지난번 실패분 재시도
+    flushDirty();      // 지난번에 못 밀어낸 편집분
+    sheetLoad(true);   // 본인 데이터 불러오기(JSONP) — skew 보정도 여기서 된다
+    sheetAutoInit();   // 탭 이탈·복귀 · 2분 주기 밀어내기+갱신 (SHEET 없으면 아무것도 안 건다)
+    pendPaint();
   }
   const sess=JSON.parse(localStorage.getItem(GATE_KEY)||'null');
   if(sess && sess.code===cfg.code && sess.name){ enter(sess.name); return; }  // 코드 그대로면 자동 입장
