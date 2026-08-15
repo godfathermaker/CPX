@@ -1472,7 +1472,12 @@ function sess(){ try{ return JSON.parse(localStorage.getItem("cpx_session")||"nu
    mode:'no-cors' 라 응답을 못 읽는다 → "보냈다"는 성공의 증거가 아니다.
    다음 sheetLoad() 에서 서버가 그 값을 갖고 있는 걸 보고 나서야 pending 을 지운다. */
 const PFIELDS=["text","mn","ddx","tag","hl","prog"];
-const PEND_WARN=5*60*1000;                  // 이만큼 확인이 안 되면 헤더에 경고
+/* no-cors 로 보내므로 "보냈다"는 성공의 증거가 아니다 — 서버가 거절해도 fetch 는 resolve 한다.
+   그래서 저장 직후 JSONP 로 되읽어(응답을 읽을 수 있는 유일한 경로) 실제 반영을 확인한다.
+   확인되면 pend 에서 빠지고, 안 되면 한 번 더 자동으로 밀어낸 뒤 경고를 띄운다. */
+const VERIFY_AFTER=2500;                    // 저장 후 이만큼 뒤 되읽어 확인
+const VERIFY_RETRY=7000;                    // 확인 실패 시 재전송 후 다시 확인
+const PEND_WARN=30000;                      // 이만큼 확인이 안 되면 헤더에 경고
 let pend=lsObj(LS_PEND), dirty=lsObj(LS_DIRTY);
 const pendSave =()=>{ try{ localStorage.setItem(LS_PEND ,JSON.stringify(pend )); }catch(e){} };
 const dirtySave=()=>{ try{ localStorage.setItem(LS_DIRTY,JSON.stringify(dirty)); }catch(e){} };
@@ -1494,6 +1499,7 @@ function pendMark(p){
   PFIELDS.forEach(f=>{
     if(p[f]===undefined) return;
     const v=(f==="hl")?hlKey(p[f]):String(p[f]==null?"":p[f]);
+    /* 다시 보내는 것이므로 이전의 실패 표시(f)는 지운다 — 성공하면 경고도 사라져야 한다 */
     pend[p.cardId+"|"+f]={v:v, t:+p.ts||srvNow(), s:Date.now()};
     dirtyClear(p.cardId,f);
     ch=true;
@@ -1510,6 +1516,36 @@ function pendClear(id,f,srvVal,srvTs){
   return false;
 }
 
+/* ── 저장 직후 확인 ──────────────────────────────────────────
+   여러 번 저장해도 확인은 한 번으로 합친다(타이머 1개).
+   1차 확인에서 남아 있는 pend 가 있으면 그것만 다시 밀어내고 2차 확인을 건다.
+   2차에도 남으면 더 재시도하지 않는다 — PEND_WARN 이 지나면 헤더 경고가 뜨고,
+   사용자가 그걸 눌러 수동 재시도할 수 있다(무한 재시도로 할당량을 태우지 않는다). */
+let _verifyT=null, _verifyPass=0;
+function scheduleVerify(delay){
+  if(!SHEET) return;
+  if(_verifyT) return;                       // 이미 예약돼 있으면 합류
+  _verifyT=setTimeout(()=>{
+    _verifyT=null;
+    sheetLoad(true);                         // 스로틀 무시 — 확인이 목적이다
+    setTimeout(()=>{
+      const keys=Object.keys(pend);
+      if(!keys.length){ _verifyPass=0; pendPaint(); return; }
+      if(_verifyPass>=1){
+        /* 두 번 보내고 두 번 되읽었는데도 없다 = 실패가 확정된 것이다.
+           PEND_WARN 을 기다리지 말고 바로 알린다 — 모르고 지나가는 게 제일 위험하다. */
+        _verifyPass=0;
+        keys.forEach(k=>{ pend[k].f=true; });
+        pendSave(); pendPaint();
+        return;
+      }
+      _verifyPass++;
+      retryPending();                        // 아직 안 들어간 것만 다시 보낸다
+      scheduleVerify(VERIFY_RETRY);
+    }, 1500);                                // JSONP 응답이 돌아올 여유
+  }, delay||VERIFY_AFTER);
+}
+
 function queueAdd(p){
   try{ const q=JSON.parse(localStorage.getItem(LS_FBQ)||"[]");
        q.push(p); localStorage.setItem(LS_FBQ,JSON.stringify(q.slice(-300))); }catch(e){}
@@ -1524,9 +1560,9 @@ function sheetPush(p,requeue){
     return fetch(SHEET,{method:"POST",mode:"no-cors",
       headers:{"Content-Type":"text/plain;charset=utf-8"},   // preflight 회피
       body:JSON.stringify(p)})
-      .then(()=>true)
-      .catch(()=>{ if(requeue!==false) queueAdd(p); return false; });
-  }catch(e){ if(requeue!==false) queueAdd(p); return Promise.resolve(false); }
+      .then(()=>{ scheduleVerify(); return true; })   // 보낸 것으로 끝내지 않고 되읽어 확인한다
+      .catch(()=>{ if(requeue!==false) queueAdd(p); pendPaint(); return false; });
+  }catch(e){ if(requeue!==false) queueAdd(p); pendPaint(); return Promise.resolve(false); }
 }
 function queueFlush(){
   if(!SHEET) return;
@@ -1661,7 +1697,8 @@ function pendPaint(){
   const el=document.getElementById("bkStat"); if(!el) return;
   if(!SHEET){ el.className="bkstat"; el.textContent=""; el.title=""; return; }
   const now=Date.now();
-  const late=Object.keys(pend).filter(k=>now-(+pend[k].s||0)>PEND_WARN).length;
+  /* f = 확인이 실패로 끝난 것(즉시 경고). s 는 보낸 시각 — 확인이 아예 안 돌아온 경우의 안전망. */
+  const late=Object.keys(pend).filter(k=>pend[k].f || now-(+pend[k].s||0)>PEND_WARN).length;
   if(late){
     el.className="bkstat bad";
     el.textContent="⚠ 시트 백업 안 됨 ("+late+"건)";
@@ -2151,7 +2188,7 @@ function backHtml(card){
 /* ═══ 뷰 분기 ═══ */
 /* 자동갱신(2분 주기·다른 탭 변경)으로 다시 그릴 때는 스크롤 위치를 지킨다.
    사용자 조작으로 부른 render() 는 종전대로 맨 위로 올라간다. */
-let _keepScroll=false;
+let _keepScroll=false, _lastRendered="";   // 마지막으로 그린 "뷰|카드|앞뒤" — 스크롤 유지 판단용
 function renderKeep(){ _keepScroll=true; try{ render(); } finally{ _keepScroll=false; } }
 function render(){
   fbFlush(); mnFlush(); ddxFlush();              // 이동 전 입력중이던 메모·말야마·감별진단 확정
@@ -2203,9 +2240,15 @@ function renderCard(){
   /* 감별진단은 ⑦ 안의 내용이라 같은 논리로 ⑦ 공개 뒤에만 */
   if(flipped && ddxVisible(card)) html+=ddxHtml(card);
   html+=fbHtml(card);
-  const keepTop=_keepScroll?$("main").scrollTop:0;
+  /* 스크롤 유지 규칙:
+     같은 카드의 같은 면을 다시 그리는 것이면(저장·태그·단계열기·자동갱신 등)
+     보고 있던 위치를 그대로 둔다. 카드가 바뀌거나 앞뒤를 뒤집을 때만 맨 위로 올린다.
+     — 아래로 내려서 메모를 쓰다 저장을 누르면 위로 튀던 문제. */
+  const _rkey=set.view+"|"+card.id+"|"+(flipped?"b":"f");
+  const keepTop=(_keepScroll||_rkey===_lastRendered)?$("main").scrollTop:0;
   $("main").innerHTML=html;
   $("main").scrollTop=keepTop;
+  _lastRendered=_rkey;
 
   if(!flipped){ $("front").onclick=()=>{flipped=true; resetReveal(); render();}; }
   else{
